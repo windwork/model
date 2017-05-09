@@ -1,0 +1,22 @@
+{
+  "name" : "windwork/model",
+  "type": "library",
+  "description" : "windwork model component",
+  "keywords": ["model","ActiveModel","DomainModel","ActiveRecord"],
+  "version" : "0.1.1",
+  "require" : {
+    "php" : ">=5.5.0",
+    "windwork/db" : "*",
+    "windwork/util" : "*"
+  },
+  "license" : "MIT",
+  "autoload" : {
+    "psr-4" : {
+      "wf\\model\\" : "lib"
+    }
+  },
+  "authors" : [ {
+    "name" : "Windwork Community",
+    "homepage" : "http://windwork.org"
+  } ]
+}
