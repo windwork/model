@@ -39,7 +39,7 @@ User模型
 ```
 namespace app\user\model;
 
-class UserModel extends \wf\mvc\Model {    
+class UserModel extends \wf\model\Model {    
     protected $table = 'user';
 }
 
@@ -67,7 +67,7 @@ if($user->setPkv(1)->load()) {
 ```
 namespace app\user\model;
 
-class UserModel extends \wf\mvc\Model {    
+class UserModel extends \wf\model\Model {    
     protected $table = 'user';    
     
     /**
@@ -83,10 +83,10 @@ class UserModel extends \wf\mvc\Model {
      * ]
      */
     protected $fieldMap = [
-        'uname' => 'name', // 把字段uname映射到name属性，属性名和字段名可以不一样
+        'uname' => 'userName', // 把字段uname映射到name属性，属性名和字段名可以不一样
     ];
 
-    private $name;
+    private $userName;
 }
 ```
 
@@ -100,6 +100,7 @@ Model::create(): 添加/新增模型数据到数据库
 Model::update()：更新模型数据
 Model::delete()：更新模型数据
 Model::save()：保存模型数据
+Model::replace()：替换方式保存模型数据
 
 ### 原生SQL读写数据库
 在模型中可执行原生SQL，通过self::getDb()获取数据库操作对象，更详细见 [数据库操作组件](wf.db.html)，数据库操作对象可执行如下方法进行数据库读写：
