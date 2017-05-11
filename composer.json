@@ -3,9 +3,10 @@
   "type": "library",
   "description" : "windwork model component",
   "keywords": ["model","ActiveModel","DomainModel","ActiveRecord"],
-  "version" : "0.1.1",
+  "version" : "0.3.0",
   "require" : {
     "php" : ">=5.5.0",
+    "windwork/cache" : "*",
     "windwork/db" : "*",
     "windwork/util" : "*"
   },
