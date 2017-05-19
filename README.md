@@ -1,13 +1,13 @@
 Windwork 模型组件
 =========================
+Windwork模型基类\wf\model\Model不包含数据库库的访问。
+Windwork领域模型\wf\model\ActiveRecord可访问数据库。
 
-Windwork 模型是基于数据库的领域模型（包括业务逻辑+数据访问），采用Active Record架构模式，但保留了Model的命名方式。
-
-Windwork模型封装了表字段映射到模型属性的功能，它们既代表实体，包含业务逻辑，又是数据对象，并负责把自己存储到数据库中。Windwork模型有如下特性：
+Windwork Active Record领域模型有如下特性：
 - 是一种领域模型(Domain Model)，业务逻辑代码封装在模型类中，并通过模型访问数据，即模型层的职责是负责业务逻辑和数据访问。；
-- 每一个数据表对应创建一个模型类，类的每一个对象实例对应于数据库中表的一行记录；通常表的每个字段在类中都有相应的属性；
-- 集成了ORM的功能，将记录字段映射到模型的属性；
-- 同时负责把自己持久化，在模型基类中封装了对数据库的访问，即CURD；
+- 每一个数据表对应一个模型类，类的每一个对象实例对应于数据库中表的一行记录；通常表的每个字段在类中都有相应的属性；
+- 将记录字段映射到模型的属性；
+- 在模型基类中封装了对数据库的访问，即CURD，负责把自己持久化；
 
 
 ## 模型约定
@@ -39,7 +39,7 @@ User模型
 ```
 namespace app\user\model;
 
-class UserModel extends \wf\model\Model {    
+class UserModel extends \wf\model\ActiveRecord {    
     protected $table = 'user';
 }
 
@@ -67,7 +67,7 @@ if($user->setPkv(1)->load()) {
 ```
 namespace app\user\model;
 
-class UserModel extends \wf\model\Model {    
+class UserModel extends \wf\model\ActiveRecord {    
     protected $table = 'user';    
     
     /**
@@ -95,15 +95,15 @@ class UserModel extends \wf\model\Model {
 ## 数据访问
 
 ### 模型封装数据访问方法：
-Model::load(): 从数据库加载模型一条记录，并将记录映射到模型属性,
-Model::create(): 添加/新增模型数据到数据库
-Model::update()：更新模型数据
-Model::delete()：更新模型数据
-Model::save()：保存模型数据
-Model::replace()：替换方式保存模型数据
+ActiveRecord::load(): 从数据库加载模型一条记录，并将记录映射到模型属性,
+ActiveRecord::create(): 添加/新增模型数据到数据库
+ActiveRecord::update()：更新模型数据
+ActiveRecord::delete()：更新模型数据
+ActiveRecord::save()：保存模型数据
+ActiveRecord::replace()：替换方式保存模型数据
 
 ### 原生SQL读写数据库
-在模型中可执行原生SQL，通过self::getDb()获取数据库操作对象，更详细见 [数据库操作组件](wf.db.html)，数据库操作对象可执行如下方法进行数据库读写：
+在模型中可执行原生SQL，通过 static::getDb()获取数据库操作对象，更详细见 [数据库操作组件](wf.db.html)，数据库操作对象可执行如下方法进行数据库读写：
 ```    
     /**
      * 获取所有记录
@@ -164,8 +164,8 @@ Model::replace()：替换方式保存模型数据
     
 ```
 例如：
-- 获取多条记录 self::getDb()->getAll($sql);
-- 获取一条记录 self::getDb()->getRow($sql);
+- 获取多条记录 static::getDb()->getAll($sql);
+- 获取一条记录 static::getDb()->getRow($sql);
 - 获取一条记录的第一列的值 self::getDb()->getColumn($sql);
 
 #### SQL防注入
@@ -188,7 +188,7 @@ $args = [
   'user', // %t 参数的值
   1,// %i 参数的值
 ];
-self::getDb()->getAll($sql, $args);
+static::getDb()->getAll($sql, $args);
 
 ```
 
@@ -199,12 +199,37 @@ self::getDb()->getAll($sql, $args);
 Windwork 模型中默认已启用事务，不需要另外启用。
 可以嵌套启用事务，最终只在最上一级事务提交后才会真正执行事务。
 
+```
+namespace app\user\model;
+
+class UserModel extends \wf\model\ActiveRecord 
+{    
+    protected $table = 'user';
+
+    public function create() 
+    {
+        $transaction = static::getDb()->beginTransaction();
+        try {
+            parent::create();
+            // 其他数据库写入业务
+            // ……
+
+            // 没异常则提交事务
+            $transaction->commit();
+        } catch(\Exception $e) {
+            // 出现异常则回滚事务
+            $transaction->rollback();
+        }
+    }
+}
+
+```
 
 
 ```
 
 ## 模型表关联
-为了保持代码简单可控，对于数据表关联的关系，我们没有实现到模型上进行自动处理，每个模型的表有关联数据表，需程序员自己实现业务处理。
+为了保持代码简单直观，对于数据表关联的关系，我们没有实现到模型上进行自动处理，每个模型的表有关联数据表，需程序员自己实现业务处理。
 
 
 
