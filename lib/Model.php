@@ -12,7 +12,7 @@ namespace wf\model;
 /**
  * 模型基类，不包含访问数据库的逻辑
  *
- * @package     wf.core
+ * @package     wf.model
  * @author      cm <cmpan@qq.com>
  * @link        http://docs.windwork.org/manual/wf.model.html
  * @since       0.1.0
@@ -21,63 +21,41 @@ abstract class Model
 {
     /**
      * 错误信息
-     * @var array
+     * @var \wf\model\Error
      */
-    protected $errs = [];
+    protected $error;
     
     /**
      * 获取错误信息
      *
-     * @return array
+     * @return \wf\model\Error
      */
-    public function getErrs()
+    public function getError()
     {
-        return $this->errs;
+        return $this->error;
     }
-    
-    /**
-     * 获取最后一个错误的内容
-     *
-     * @return string
-     */
-    public function getLastErr()
-    {
-        $err = end($this->errs);
-        reset($this->errs);
         
-        return $err;
-    }
-    
     /**
      * 是否有错误
      *
      * @return bool
      */
-    public function hasErr()
+    public function hasError()
     {
-        return empty($this->errs) ? false : true;
+        return isset($this->error);
     }
     
     /**
      * 设置错误信息
      *
-     * @param string|array $msg
-     * @return \wf\core\Object
+     * @param string $msg 错误消息内容
+     * @param int $code = 90000 错误码
+     * @return \wf\model\Model
      */
-    public function setErr($msg)
+    public function setError($msg, $code = \wf\model\Error::DEFAULT_MODEL_ERROR_CODE)
     {
-        $this->errs = array_merge($this->errs, (array)$msg);
+        $this->error = new \wf\model\Error($msg, $code);
     
-        return $this;
-    }
-    
-    /**
-     * 重置错误信息
-     * @return \wf\model\ModelBase
-     */
-    public function resetErr() {
-        $this->errs = [];
-        
         return $this;
     }
     
@@ -101,16 +79,16 @@ abstract class Model
      * @param bool $firstErrBreak = false 是否在验证出现第一次不符合规则时返回，为false则验证所有规则
      * @return bool 验证是否通过
      */
-    protected function validate(array $data, array $validRules, $firstErrBreak = false) {
+    protected function validate(array $data, array $validRules) {
         if (!$validRules) {
             return true;
         }
         
         $validObj = new \wf\util\Validator();
-        $validResult = $validObj->validate($data, $validRules, $firstErrBreak);
+        $validResult = $validObj->validate($data, $validRules, true);
         
         if (!$validResult) {
-            $this->setErr($validObj->getErrs());
+            $this->setErr($validObj->getErrs()[0]);
             return false;
         }
         

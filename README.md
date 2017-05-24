@@ -17,7 +17,7 @@ Windwork Active Record领域模型有如下特性：
 命名空间：app\{$mod}\model;
 类命名为：XxxModel,类名以大写开头，Model作为后缀，使用驼峰命名规则。
 文件名为：XxxModel.php,类名后面加.php，大小写敏感；
-需要继承：需要数据库读写的模型继承\wf\model\Model类，实现业务逻辑但不需要数据存取的继承\wf\model\ModelBase类；
+需要继承：需要数据库读写的模型继承\wf\model\ActiveRecord类，实现业务逻辑但不需要数据存取的继承\wf\model\Model类；
 对应表类：protected $table = '数据表名称';
 ```
 

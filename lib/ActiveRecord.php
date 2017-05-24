@@ -139,7 +139,7 @@ class ActiveRecord extends Model {
      *
      * @param string $name
      * @param mixed $val
-     * @return \wf\model\Model
+     * @return \wf\model\ActiveRecord
      */
     public function __set($name, $val) {        
         $this->setAttrVal($name, $val);
@@ -212,7 +212,6 @@ class ActiveRecord extends Model {
      * @param string $name
      * @param mixed $args
      * @throws \BadMethodCallException
-     * @return \wf\core\Object|multitype:
      */
     public function __call($name, $args = []) 
     {
@@ -294,7 +293,7 @@ class ActiveRecord extends Model {
      * 
      * @param string|array $pkv 主键值，如果是多个字段构成的主键，则使用关联数组结构，如: $pkv = ['pk1' => 123, 'pk2' => 'value', ...]
      * @throws \wf\model\Exception
-     * @return \wf\model\Model
+     * @return \wf\model\ActiveRecord
      */
     public function setPkv($pkv) {        
         if (is_scalar($pkv)) {
@@ -344,7 +343,7 @@ class ActiveRecord extends Model {
     
     /**
      * 模型加载数据后，必须设置当前实例加载的实例的主键值才被视为已加载
-     * @return \wf\model\Model
+     * @return \wf\model\ActiveRecord
      */
     protected function setLoaded() {
         $this->loadedPkv = $this->getPkv();
@@ -355,7 +354,7 @@ class ActiveRecord extends Model {
      * 从数组加载实例数据 ,<br />
      * @param array $array
      * @param bool $setLoaded = false 是否设置实例为已加载
-     * @return \wf\model\Model
+     * @return \wf\model\ActiveRecord
      */
     public function fromArray($array, $setLoaded = false) {
         foreach ($array as $field => $value) {
@@ -469,7 +468,7 @@ class ActiveRecord extends Model {
         try {
             $exe = self::getDb()->exec("DELETE FROM %t WHERE %x", [$this->table, $where]);
         } catch (\Exception $e) {
-            $this->setErr($e->getMessage());
+            $this->setError($e->getMessage());
             return false;
         }
         
@@ -493,7 +492,7 @@ class ActiveRecord extends Model {
         try {    
             self::getDb()->exec($sql, $arg);
         } catch (\Exception $e) {
-            $this->setErr($e->getMessage());
+            $this->setError($e->getMessage());
             return false;
         }
                 
@@ -539,7 +538,7 @@ class ActiveRecord extends Model {
         try {
             self::getDb()->exec($sql, $arg);
         } catch (\Exception $e) {
-            $this->setErr($e->getMessage());
+            $this->setError($e->getMessage());
             return false;
         }
         
@@ -655,7 +654,7 @@ class ActiveRecord extends Model {
         try {
             $ret = self::getDb()->exec("UPDATE %t SET %x WHERE %x", $arg);
         } catch (\Exception $e) {
-            $this->setErr($e->getMessage());
+            $this->setError($e->getMessage());
             return false;
         }
         
@@ -681,7 +680,7 @@ class ActiveRecord extends Model {
         try {
             $ret = self::getDb()->exec("UPDATE %t SET %x WHERE %x", $arg);
         } catch (\Exception $e) {
-            $this->setErr($e->getMessage());
+            $this->setError($e->getMessage());
             return false;
         }
         
@@ -716,7 +715,7 @@ class ActiveRecord extends Model {
     /**
      * 添加锁定字段，锁定字段后，不保添加/更新字段的值到数据库。
      * @param string $fields 字段名，用半角逗号隔开
-     * @return \wf\model\Model
+     * @return \wf\model\ActiveRecord
      */
     public function addLockFields($fields) {
         $fields = explode(',', str_replace(' ', '', strtolower($fields)));
@@ -727,7 +726,7 @@ class ActiveRecord extends Model {
     /**
      * 去掉锁定字段
      * @param string $fields
-     * @return \wf\model\Model
+     * @return \wf\model\ActiveRecord
      */
     public function removeLockFields($fields) {
         $fields = explode(',', str_replace(' ', '', strtolower($fields)));
