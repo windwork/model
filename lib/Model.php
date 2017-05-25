@@ -48,13 +48,19 @@ abstract class Model
     /**
      * 设置错误信息
      *
-     * @param string $msg 错误消息内容
-     * @param int $code = 90000 错误码
+     * @param string|\wf\model\Error $error 错误消息内容
+     * @param int $code = 90000 错误码，如果$error参数是\wf\model\Error实例，则忽略此参数
      * @return \wf\model\Model
      */
-    public function setError($msg, $code = \wf\model\Error::DEFAULT_MODEL_ERROR_CODE)
+    public function setError($error, $code = \wf\model\Error::DEFAULT_MODEL_ERROR_CODE)
     {
-        $this->error = new \wf\model\Error($msg, $code);
+        if ($error instanceof \wf\model\Error) {
+            $this->error = $error;
+        } elseif (is_scalar($error)) {
+            $this->error = new \wf\model\Error($error, $code);
+        } else {
+            throw new \InvalidArgumentException('错误的消息类型');
+        }
     
         return $this;
     }
@@ -88,7 +94,7 @@ abstract class Model
         $validResult = $validObj->validate($data, $validRules, true);
         
         if (!$validResult) {
-            $this->setErr($validObj->getErrs()[0]);
+            $this->setError($validObj->getErrs()[0]);
             return false;
         }
         

@@ -9,8 +9,6 @@
  */
 namespace wf\model;
 
-use \wf\db\QueryBuilder;
-
 /**
  * Active Record领域模型类
  * Active Record(活动记录)的本质是一种领域模型，特点是一个模型类对应关系型数据库中的
@@ -460,7 +458,7 @@ class ActiveRecord extends Model {
      * @return boolean
      */
     public function deleteBy($whArr = []) {
-        $where = QueryBuilder::whereArr($whArr ? $whArr : $this->pkvWhere());
+        $where = \wf\db\QueryBuilder::whereArr($whArr ? $whArr : $this->pkvWhere());
         if(!trim($where)) {
             throw new Exception('请传入删除记录的条件'); 
         }
@@ -635,7 +633,7 @@ class ActiveRecord extends Model {
      * @return number
      */
     public function updateBy($data, $whArr) {
-        $where = QueryBuilder::whereArr($whArr);
+        $where = \wf\db\QueryBuilder::whereArr($whArr);
         
         if (empty($where)) {
             throw new Exception('The $whereArr param format error!');
@@ -675,7 +673,7 @@ class ActiveRecord extends Model {
             $update[$field] = $this->$field;
         }
         
-        $arg = [$this->table, $this->fieldSet($update), QueryBuilder::whereArr($this->pkvWhere())];
+        $arg = [$this->table, $this->fieldSet($update), \wf\db\QueryBuilder::whereArr($this->pkvWhere())];
 
         try {
             $ret = self::getDb()->exec("UPDATE %t SET %x WHERE %x", $arg);
@@ -709,7 +707,7 @@ class ActiveRecord extends Model {
         if (!$this->tableSchema['field']) {
             throw new Exception('请在' . get_class($this) . '构造函数中调用父类的构造函数');
         }
-        return QueryBuilder::buildSqlSet($data, $this->tableSchema['field'], $this->lockedFields);
+        return \wf\db\QueryBuilder::buildSqlSet($data, $this->tableSchema['field'], $this->lockedFields);
     }
 
     /**
