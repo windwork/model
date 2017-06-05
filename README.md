@@ -103,7 +103,7 @@ ActiveRecord::save()：保存模型数据
 ActiveRecord::replace()：替换方式保存模型数据
 
 ### 原生SQL读写数据库
-在模型中可执行原生SQL，通过 static::getDb()获取数据库操作对象，更详细见 [数据库操作组件](wf.db.html)，数据库操作对象可执行如下方法进行数据库读写：
+在模型中可执行原生SQL，通过 $this->getDb()获取数据库操作对象，更详细见 [数据库操作组件](wf.db.html)，数据库操作对象可执行如下方法进行数据库读写：
 ```    
     /**
      * 获取所有记录
@@ -164,8 +164,8 @@ ActiveRecord::replace()：替换方式保存模型数据
     
 ```
 例如：
-- 获取多条记录 static::getDb()->getAll($sql);
-- 获取一条记录 static::getDb()->getRow($sql);
+- 获取多条记录 $this->getDb()->getAll($sql);
+- 获取一条记录 $this->getDb()->getRow($sql);
 - 获取一条记录的第一列的值 self::getDb()->getColumn($sql);
 
 #### SQL防注入
@@ -188,7 +188,7 @@ $args = [
   'user', // %t 参数的值
   1,// %i 参数的值
 ];
-static::getDb()->getAll($sql, $args);
+$this->getDb()->getAll($sql, $args);
 
 ```
 
@@ -208,7 +208,7 @@ class UserModel extends \wf\model\ActiveRecord
 
     public function create() 
     {
-        $transaction = static::getDb()->beginTransaction();
+        $transaction = $this->getDb()->beginTransaction();
         try {
             parent::create();
             // 其他数据库写入业务

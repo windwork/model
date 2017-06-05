@@ -75,7 +75,7 @@ class ActiveRecord extends Model {
      * 数据库访问对象实例
      * @var \wf\db\IDB
      */
-    private static $db = null;
+    private $db = null;
     
     /**
      * 用来动态保存属性
@@ -97,7 +97,7 @@ class ActiveRecord extends Model {
         // 获取表结构并缓存
         if (!function_exists('cache') || !$this->tableSchema = (\cache()->read("model/table_schema/{$this->table}"))) {
             // 自动加载表信息（字段名列表、主键、主键是否自增）
-            $tableSchema = self::getDb()->getTableSchema($this->table);
+            $tableSchema = $this->getDb()->getTableSchema($this->table);
             is_array($tableSchema['pk']) && sort($tableSchema['pk']);
             
             // tableSchema
@@ -463,11 +463,10 @@ class ActiveRecord extends Model {
             throw new Exception('请传入删除记录的条件'); 
         }
         
-        try {
-            $exe = self::getDb()->exec("DELETE FROM %t WHERE %x", [$this->table, $where]);
-        } catch (\Exception $e) {
-            $this->setError($e->getMessage());
-            return false;
+        $exe = $this->getDb()->exec("DELETE FROM %t WHERE %x", [$this->table, $where]);
+
+        if (false === $exe) {
+            throw new \wf\model\Exception($this->getDb()->getLastErr());
         }
         
         return $exe;
@@ -486,20 +485,18 @@ class ActiveRecord extends Model {
         
         $arg = [$this->table, $this->fieldSet($data)];
         $sql = "INSERT INTO %t SET %x";
+        $exe = $this->getDb()->exec($sql, $arg);
         
-        try {    
-            self::getDb()->exec($sql, $arg);
-        } catch (\Exception $e) {
-            $this->setError($e->getMessage());
-            return false;
+        if (false === $exe) {
+            throw new \wf\model\Exception($this->getDb()->getLastErr());
         }
-                
+        
         // 插入数据库成功后设置主键值
         $pkv = null;
         
         if ($this->tableSchema['ai']) {
             // 自增主键
-            $pkv = self::getDb()->lastInsertId();
+            $pkv = $this->getDb()->lastInsertId();
         } else if (is_array($this->tableSchema['pk'])) {
             // 多个字段主键
             $pkv = [];
@@ -532,12 +529,10 @@ class ActiveRecord extends Model {
         
         $arg = [$this->table, $this->fieldSet($data)];
         $sql = "REPLACE INTO %t SET %x";
-    
-        try {
-            self::getDb()->exec($sql, $arg);
-        } catch (\Exception $e) {
-            $this->setError($e->getMessage());
-            return false;
+        $exe = $this->getDb()->exec($sql, $arg);
+
+        if (false === $exe) {
+            throw new \wf\model\Exception($this->getDb()->getLastErr());
         }
         
         $pkv = null;
@@ -621,7 +616,7 @@ class ActiveRecord extends Model {
         empty($opts['table']) && $opts['table'] = $this->table;
         
         $obj = new \wf\db\Find($opts);
-        $obj->setDb(self::getDb());
+        $obj->setDb($this->getDb());
         
         return $obj;
     }
@@ -648,15 +643,13 @@ class ActiveRecord extends Model {
         }
         
         $arg = [$this->table, $this->fieldSet($data), $where];
-        
-        try {
-            $ret = self::getDb()->exec("UPDATE %t SET %x WHERE %x", $arg);
-        } catch (\Exception $e) {
-            $this->setError($e->getMessage());
-            return false;
+        $exe = $this->getDb()->exec("UPDATE %t SET %x WHERE %x", $arg);
+
+        if (false === $exe) {
+            throw new \wf\model\Exception($this->getDb()->getLastErr());
         }
         
-        return $ret;
+        return $exe;
     }
         
     /**
@@ -674,15 +667,13 @@ class ActiveRecord extends Model {
         }
         
         $arg = [$this->table, $this->fieldSet($update), \wf\db\QueryBuilder::whereArr($this->pkvWhere())];
+        $exe = $this->getDb()->exec("UPDATE %t SET %x WHERE %x", $arg);
 
-        try {
-            $ret = self::getDb()->exec("UPDATE %t SET %x WHERE %x", $arg);
-        } catch (\Exception $e) {
-            $this->setError($e->getMessage());
-            return false;
+        if (false === $exe) {
+            throw new \wf\model\Exception($this->getDb()->getLastErr());
         }
         
-        return $ret;
+        return $exe;
     }
         
     /**
@@ -755,20 +746,23 @@ class ActiveRecord extends Model {
     /**
      * 获取数据库访问对象实例
      */
-    public static function getDb() {
-        if (!self::$db) {
-            self::$db = \db();
+    public function getDb() {
+        if (!$this->db) {
+            $this->db = \db();
         }
         
-        return self::$db;
+        return $this->db;
     }
     
     /**
      * 设置数据库访问对象实例
      * @param \wf\db\IDB $db
+     * @return \wf\model\ActiveRecord
      */
-    public static function setDb(\wf\db\IDB $db) {
-        self::$db = $db;
+    public function setDb(\wf\db\IDB $db) {
+        $this->db = $db;
+        
+        return $this;
     }
 
     /**
