@@ -11,6 +11,7 @@ require_once __DIR__ . '/../../db/lib/Find.php';
 require_once __DIR__ . '/../../db/lib/strategy/PDOMySQL.php';
 require_once __DIR__ . '/../../util/lib/Validator.php';
 require_once __DIR__ . '/../lib/Model.php';
+require_once __DIR__ . '/../lib/Error.php';
 require_once __DIR__ . '/../lib/Exception.php';
 require_once __DIR__ . '/../lib/ActiveRecord.php';
 
@@ -613,28 +614,29 @@ class ActiveRecordTest extends PHPUnit_Framework_TestCase
         ];
         // 密码为空
         $this->assertFalse($obj->fromArray($data)->create());
-
+        
         // 密码小于6位
+        $obj->resetError();
         $data['pw'] = '123';
-        $obj->resetErr();
         $this->assertFalse($obj->fromArray($data)->create());
+
         
         // 密码超过20位
+        $obj->resetError();
         $data['pw'] = 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx';
-        $obj->resetErr();
         $this->assertFalse($obj->fromArray($data)->create());
         
         // 密码合法
-        $obj->resetErr();
+        $obj->resetError();
         $data['pw'] = '123456';
         $this->assertTrue((bool)$obj->fromArray($data)->create());
         
         // 邮箱格式不合法
-        $obj->resetErr();
+        $obj->resetError();
         $data['email'] = '123456';
         $this->assertFalse((bool)$obj->fromArray($data)->create());
-        
-        $obj->resetErr();
+
+        $obj->resetError();
         $data['email'] = 'dsd@xx.cc';
         $this->assertTrue((bool)$obj->fromArray($data)->create());
     }

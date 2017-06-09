@@ -46,6 +46,15 @@ abstract class Model
     }
     
     /**
+     * 重置错误信息（将错误信息属性设为null）
+     * @return \wf\model\Model
+     */
+    public function resetError() {
+        $this->error = null;
+        return $this;
+    }
+    
+    /**
      * 设置错误信息
      *
      * @param string|\wf\model\Error $error 错误消息内容
