@@ -73,7 +73,7 @@ class ActiveRecord extends Model {
     
     /**
      * 数据库访问对象实例
-     * @var \wf\db\IDB
+     * @var \wf\db\DBInterface
      */
     private $db = null;
     
@@ -756,10 +756,10 @@ class ActiveRecord extends Model {
     
     /**
      * 设置数据库访问对象实例
-     * @param \wf\db\IDB $db
+     * @param \wf\db\DBInterface $db
      * @return \wf\model\ActiveRecord
      */
-    public function setDb(\wf\db\IDB $db) {
+    public function setDb(\wf\db\DBInterface $db) {
         $this->db = $db;
         
         return $this;

@@ -4,8 +4,8 @@ define('IS_IN', 1);
 define('IS_UNIT_TEST', 1);
 
 require_once __DIR__ . '/../../db/lib/Exception.php';
-require_once __DIR__ . '/../../db/lib/IDB.php';
-require_once __DIR__ . '/../../db/lib/ADB.php';
+require_once __DIR__ . '/../../db/lib/DBInterface.php';
+require_once __DIR__ . '/../../db/lib/DBAbstract.php';
 require_once __DIR__ . '/../../db/lib/QueryBuilder.php';
 require_once __DIR__ . '/../../db/lib/Find.php';
 require_once __DIR__ . '/../../db/lib/strategy/PDOMySQL.php';
