@@ -253,3 +253,19 @@ class UserModel extends \wf\model\ActiveRecord
 - 文件名为 XxxService.php,类名后面加.php，大小写敏感；
 - 需要继承 wf\model\Model 类
 
+
+
+### 服务层实例
+```
+// app/trade/service/OrderService.php
+namespace app\trade\service;
+
+class OrderService extends wf\model\Model
+{
+    // 确认下单
+    public function createOrder($attr)
+    {
+        // 
+    }
+}
+```
