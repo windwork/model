@@ -2,6 +2,7 @@
 define('IS_IN', 1);
 
 require_once '../../util/lib/Validator.php';
+require_once '../lib/Error.php';
 require_once '../lib/Model.php';
 
 use wf\model\Model;
@@ -33,12 +34,12 @@ class ModelTest extends PHPUnit_Framework_TestCase {
     }
     
     public function testGetErrs() {
-        $this->assertEmpty($this->model->getErrs());
+        $this->assertEmpty($this->model->getError());
         $this->assertFalse($this->model->test());
-        $errs = $this->model->getErrs();
+        $errs = $this->model->getError();
         $this->assertNotEmpty($errs);
         
-        $this->assertEquals("请输入attr", $this->model->getLastErr());
+        $this->assertEquals("请输入attr", $this->model->getError());
     }
     
     /**

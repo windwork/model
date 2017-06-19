@@ -13,16 +13,20 @@ Windwork Active Record领域模型有如下特性：
 ## 模型约定
 
 ```
-文件夹为：app/{$mod}/model/；
-命名空间：app\{$mod}\model;
+// 启用应用模块
+文件夹为：app/{$mod}/model/
+命名空间：app\{$mod}\model
+// 不启用模块
+文件夹为：app/model/
+命名空间：app\model
+
 类命名为：XxxModel,类名以大写开头，Model作为后缀，使用驼峰命名规则。
 文件名为：XxxModel.php,类名后面加.php，大小写敏感；
 需要继承：需要数据库读写的模型继承\wf\model\ActiveRecord类，实现业务逻辑但不需要数据存取的继承\wf\model\Model类；
 对应表类：protected $table = '数据表名称';
 ```
 
-
-## ORM
+## 字段映射
 加载数据到模型后，将自动映射到模型属性。
 
 user表
@@ -45,7 +49,7 @@ class UserModel extends \wf\model\ActiveRecord {
 
 ```
 
-user 表映射到User模型的属性
+user 表映射到UserModel的属性
 ```
 $user = new \app\user\model\UserModel();
 
@@ -59,6 +63,8 @@ if($user->setPkv(1)->load()) {
 }
 
 ```
+
+### 显式字段映射
 前面的案例是隐式映射表字段，即没有声明模型属性，自动把表字段映射成模型的属性。
 如果已设置模型属性，我们需要设置属性对应的字段进行显式映射。
 显式映射后，在模型数据从数据库加载时自动映射到类的属性；保存模型数据到数据库时，自动从模型属性获取数据存入数据库。
@@ -95,15 +101,17 @@ class UserModel extends \wf\model\ActiveRecord {
 ## 数据访问
 
 ### 模型封装数据访问方法：
-ActiveRecord::load(): 从数据库加载模型一条记录，并将记录映射到模型属性,
+ActiveRecord::load(): 从数据库加载模型一条记录，并将记录映射到模型属性，执行前需设置主键值；
 ActiveRecord::create(): 添加/新增模型数据到数据库
-ActiveRecord::update()：更新模型数据
-ActiveRecord::delete()：更新模型数据
-ActiveRecord::save()：保存模型数据
+ActiveRecord::update()：更新模型数据，执行前需先加载模型实体数据
+ActiveRecord::delete()：更新模型数据，执行前需先设置主键
+ActiveRecord::save()：保存模型数据，如果已加载数据则修改，否则创建
 ActiveRecord::replace()：替换方式保存模型数据
-
+ActiveRecord::updateBy($cdt)：根据条件更新记录字段值；
+ActiveRecord::deleteBy($cdt)：根据条件删除记录；
+ActiveRecord::find()：数据库查询器，查询数据库记录集
 ### 原生SQL读写数据库
-在模型中可执行原生SQL，通过 $this->getDb()获取数据库操作对象，更详细见 [数据库操作组件](wf.db.html)，数据库操作对象可执行如下方法进行数据库读写：
+在模型中可执行原生SQL，通过 $this->getDb()获取数据库操作对象，更详细见 [数据库操作组件](http://docs.windwork.org/manaul/wf.db.html)，数据库操作对象可执行如下方法进行数据库读写：
 ```    
     /**
      * 获取所有记录
@@ -197,6 +205,7 @@ $this->getDb()->getAll($sql, $args);
 使用事务的前提是：你使用的引擎必须支持事务。MyISAM、MEMORY引擎不支持事务，InnoDB引擎支持事务。MySQL经过多年的发展，InnoDB引擎已经是MySQL引擎中最有优势的引擎，所以推荐你优先使用InnoDB引擎。
 
 可以嵌套启用事务，最终只在最上一级事务提交后才会真正执行事务。
+数据库操作失败时将抛出异常，我们可以捕捉到异常后回滚事务，如果调用的模型是输入验证而非数据库操作错误，在事务链中建议使用抛出异常的方式，如果模型方法中不抛出异常，我们可以在事务操作逻辑中获取模型错误信息再抛出异常。
 
 ```
 namespace app\user\model;
@@ -207,17 +216,17 @@ class UserModel extends \wf\model\ActiveRecord
 
     public function create() 
     {
-        $transaction = $this->getDb()->beginTransaction();
+        $trans = $this->getDb()->beginTransaction();
         try {
             parent::create();
             // 其他数据库写入业务
             // ……
 
             // 没异常则提交事务
-            $transaction->commit();
+            $trans->commit();
         } catch(\Exception $e) {
             // 出现异常则回滚事务
-            $transaction->rollback();
+            $trans->rollback();
         }
     }
 }
@@ -229,5 +238,18 @@ class UserModel extends \wf\model\ActiveRecord
 ## 模型表关联
 为了保持代码简单直观，对于数据表关联的关系，我们没有实现到模型上进行自动处理，每个模型的表有关联数据表，需程序员自己实现业务处理。
 
+## 服务层
+一般情况下我们的业务逻辑是写在模型中，但如果逻辑很复杂的时候，模型代码越来越多，就会变得不可控。为解决这个问题，我们可以增加服务层。服务层不直接操作数据库，而是负责业务逻辑的处理，把数据存取的职责交给模型，服务从多个模型调用数据来完成业务逻辑。
 
+### 服务层约定
+
+- 启用应用模块时
+  - 文件夹为：app/{$mod}/service/
+  - 命名空间：app\{$mod}\service
+- 不启用应用模块时
+  - 文件夹为：app/service/
+  - 命名空间：app\service
+- 类命名为 XxxService，类名以大写开头，Service作为后缀，使用驼峰命名规则。
+- 文件名为 XxxService.php,类名后面加.php，大小写敏感；
+- 需要继承 wf\model\Model 类
 
