@@ -95,7 +95,7 @@ class ActiveRecord extends Model {
         }
         
         // 获取表结构并缓存
-        if (!function_exists('cache') || !$this->tableSchema = (\cache()->read("model/table_schema/{$this->table}"))) {
+        if (!function_exists('wfCache') || !$this->tableSchema = (wfCache()->read("model/table_schema/{$this->table}"))) {
             // 自动加载表信息（字段名列表、主键、主键是否自增）
             $tableSchema = $this->getDb()->getTableSchema($this->table);
             is_array($tableSchema['pk']) && sort($tableSchema['pk']);
@@ -105,8 +105,8 @@ class ActiveRecord extends Model {
             $this->tableSchema['pk']     = $tableSchema['pk']; // 表主键名，已转为小写，如果是多个字段的主键，则为['主键1', '主键2']
             $this->tableSchema['ai']     = $tableSchema['ai'];
             
-            if (function_exists('cache')) {
-                cache()->write("model/table_schema/{$this->table}", $this->tableSchema);
+            if (function_exists('wfCache')) {
+                wfCache()->write("model/table_schema/{$this->table}", $this->tableSchema);
             }
         }
         
