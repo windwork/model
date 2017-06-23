@@ -7,7 +7,7 @@ require_once __DIR__ . '/../../db/lib/Exception.php';
 require_once __DIR__ . '/../../db/lib/DBInterface.php';
 require_once __DIR__ . '/../../db/lib/DBAbstract.php';
 require_once __DIR__ . '/../../db/lib/QueryBuilder.php';
-require_once __DIR__ . '/../../db/lib/Find.php';
+require_once __DIR__ . '/../../db/lib/Finder.php';
 require_once __DIR__ . '/../../db/lib/strategy/PDOMySQL.php';
 require_once __DIR__ . '/../../util/lib/Validator.php';
 require_once __DIR__ . '/../lib/Model.php';
@@ -475,7 +475,7 @@ class ActiveRecordTest extends PHPUnit_Framework_TestCase
     public function testFind() 
     {        
         $obj = $this->model->find();
-        $this->assertTrue($obj instanceof \wf\db\Find);
+        $this->assertTrue($obj instanceof \wf\db\Finder);
     }
     
     /**

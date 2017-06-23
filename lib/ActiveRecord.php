@@ -615,7 +615,7 @@ class ActiveRecord extends Model {
     public function find($opts = []) {
         empty($opts['table']) && $opts['table'] = $this->table;
         
-        $obj = new \wf\db\Find($opts);
+        $obj = new \wf\db\Finder($opts);
         $obj->setDb($this->getDb());
         
         return $obj;
