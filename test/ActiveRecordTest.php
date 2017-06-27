@@ -17,7 +17,7 @@ require_once __DIR__ . '/../lib/ActiveRecord.php';
 
 use wf\model\ActiveRecord;
 
-function db() {
+function wfDb(){
     return new \wf\db\strategy\PDOMySQL([
         'host'           => '127.0.0.1',   // 本机测试
         'port'           => '3306',        // 数据库服务器端口
@@ -131,9 +131,9 @@ class ActiveRecordTest extends PHPUnit_Framework_TestCase
             `desc`  text NULL ,
             PRIMARY KEY (`id`)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8;";
-        db()->exec($sql);
+        wfDb()->exec($sql);
         
-        db()->exec("REPLACE INTO phpunit_test_table VALUE (1, 'cmpan', '123456', 'emall@xx.com', 'desc')");
+        wfDb()->exec("REPLACE INTO phpunit_test_table VALUE (1, 'cmpan', '123456', 'emall@xx.com', 'desc')");
         
         $this->model = new ModelTestModel();
     }
@@ -148,7 +148,7 @@ class ActiveRecordTest extends PHPUnit_Framework_TestCase
         // 删除测试表
         $sql = "DROP TABLE IF EXISTS phpunit_test_table;
                 DROP TABLE IF EXISTS phpunit_test_table_mk;";
-        db()->exec($sql);    
+        wfDb()->exec($sql);    
         
         parent::tearDown ();
             
@@ -176,7 +176,7 @@ class ActiveRecordTest extends PHPUnit_Framework_TestCase
             `desc`  text NULL ,
             PRIMARY KEY (`pk1`,pk2)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8;";
-        db()->exec($sql);
+        wfDb()->exec($sql);
         
         $objMK = new ModelMKTestModel();
         $objMK->fromArray([

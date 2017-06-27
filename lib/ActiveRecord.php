@@ -11,6 +11,7 @@ namespace wf\model;
 
 /**
  * Active Record领域模型类
+ * 
  * Active Record(活动记录)的本质是一种领域模型，特点是一个模型类对应关系型数据库中的
  * 一个表，而模型类的一个实例对应表中的一行记录，封装了数据访问，并在这些记录上增加了领域逻辑。
  * 
@@ -518,6 +519,7 @@ class ActiveRecord extends Model {
 
     /**
      * @throws \wf\db\Exception
+     * @return mixed
      */
     public function replace() {
         $data = $this->toArray();
@@ -748,7 +750,7 @@ class ActiveRecord extends Model {
      */
     public function getDb() {
         if (!$this->db) {
-            $this->db = \db();
+            $this->db = \wfDb();
         }
         
         return $this->db;
