@@ -1,5 +1,5 @@
 <?php
-define('IS_IN', 1);
+define('WF_IN', 1);
 
 require_once '../../util/lib/Validator.php';
 require_once '../lib/Error.php';
