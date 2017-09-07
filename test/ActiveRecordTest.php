@@ -8,7 +8,7 @@ require_once __DIR__ . '/../../db/lib/DBInterface.php';
 require_once __DIR__ . '/../../db/lib/DBAbstract.php';
 require_once __DIR__ . '/../../db/lib/QueryBuilder.php';
 require_once __DIR__ . '/../../db/lib/Finder.php';
-require_once __DIR__ . '/../../db/lib/strategy/PDOMySQL.php';
+require_once __DIR__ . '/../../db/lib/adapter/PDOMySQL.php';
 require_once __DIR__ . '/../../util/lib/Validator.php';
 require_once __DIR__ . '/../lib/Model.php';
 require_once __DIR__ . '/../lib/Error.php';
@@ -18,7 +18,7 @@ require_once __DIR__ . '/../lib/ActiveRecord.php';
 use wf\model\ActiveRecord;
 
 function wfDb(){
-    return new \wf\db\strategy\PDOMySQL([
+    return new \wf\db\adapter\PDOMySQL([
         'host'           => '127.0.0.1',   // 本机测试
         'port'           => '3306',        // 数据库服务器端口
         'name'           => 'test',       // 数据库名
