@@ -8,8 +8,7 @@
 		"DomainModel",
 		"ActiveRecord"
 	],
-	"version" : "0.7.0",
-	"time" : "2017-06-27 14:20:00",
+	"version" : "0.7.1",
 	"require" : {
 		"php" : ">=5.5.0",
 		"windwork/cache" : "*",
