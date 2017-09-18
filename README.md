@@ -1,9 +1,9 @@
 Windwork 模型组件
 =========================
-Windwork模型基类\wf\model\Model不包含数据库库的访问。
-Windwork领域模型\wf\model\ActiveRecord可访问数据库。
+Windwork模型基类\wf\model\Business不包含数据库库的访问。
+Windwork领域模型\wf\model\Model可访问数据库。
 
-Windwork Active Record领域模型有如下特性：
+Windwork Model领域模型有如下特性：
 - 是一种领域模型(Domain Model)，业务逻辑代码封装在模型类中，并通过模型访问数据，即模型层的职责是负责业务逻辑和数据访问。；
 - 每一个数据表对应一个模型类，类的每一个对象实例对应于数据库中表的一行记录；通常表的每个字段在类中都有相应的属性；
 - 将记录字段映射到模型的属性；
@@ -33,7 +33,7 @@ composer require windwork/wf
 
 类命名为：XxxModel,类名以大写开头，Model作为后缀，使用驼峰命名规则。
 文件名为：XxxModel.php,类名后面加.php，大小写敏感；
-需要继承：需要数据库读写的模型继承\wf\model\ActiveRecord类，实现业务逻辑但不需要数据存取的继承\wf\model\Model类；
+需要继承：需要数据库读写的模型继承\wf\model\Model类，实现业务逻辑但不需要数据存取的继承\wf\model\Business类；
 对应表类：protected $table = '数据表名称';
 ```
 
@@ -54,7 +54,7 @@ User模型
 ```
 namespace app\user\model;
 
-class UserModel extends \wf\model\ActiveRecord {    
+class UserModel extends \wf\model\Model {    
     protected $table = 'user';
 }
 
@@ -84,7 +84,7 @@ if($user->setPkv(1)->load()) {
 ```
 namespace app\user\model;
 
-class UserModel extends \wf\model\ActiveRecord {    
+class UserModel extends \wf\model\Model {    
     protected $table = 'user';    
     
     /**
@@ -112,15 +112,15 @@ class UserModel extends \wf\model\ActiveRecord {
 ## 数据访问
 
 ### 模型封装数据访问方法：
-ActiveRecord::load(): 从数据库加载模型一条记录，并将记录映射到模型属性，执行前需设置主键值；
-ActiveRecord::create(): 添加/新增模型数据到数据库
-ActiveRecord::update()：更新模型数据，执行前需先加载模型实体数据
-ActiveRecord::delete()：更新模型数据，执行前需先设置主键
-ActiveRecord::save()：保存模型数据，如果已加载数据则修改，否则创建
-ActiveRecord::replace()：替换方式保存模型数据
-ActiveRecord::updateBy($cdt)：根据条件更新记录字段值；
-ActiveRecord::deleteBy($cdt)：根据条件删除记录；
-ActiveRecord::find()：数据库查询器，查询数据库记录集
+Model::load(): 从数据库加载模型一条记录，并将记录映射到模型属性，执行前需设置主键值；
+Model::create(): 添加/新增模型数据到数据库
+Model::update()：更新模型数据，执行前需先加载模型实体数据
+Model::delete()：更新模型数据，执行前需先设置主键
+Model::save()：保存模型数据，如果已加载数据则修改，否则创建
+Model::replace()：替换方式保存模型数据
+Model::updateBy($cdt)：根据条件更新记录字段值；
+Model::deleteBy($cdt)：根据条件删除记录；
+Model::find()：数据库查询器，查询数据库记录集
 ### 原生SQL读写数据库
 在模型中可执行原生SQL，通过 $this->getDb()获取数据库操作对象，更详细见 [数据库操作组件](http://docs.windwork.org/manaul/wf.db.html)，数据库操作对象可执行如下方法进行数据库读写：
 ```    
@@ -221,7 +221,7 @@ $this->getDb()->getAll($sql, $args);
 ```
 namespace app\user\model;
 
-class UserModel extends \wf\model\ActiveRecord 
+class UserModel extends \wf\model\Model 
 {    
     protected $table = 'user';
 
