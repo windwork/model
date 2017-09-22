@@ -83,16 +83,25 @@ class Model extends Business {
      * @var array
      */
     protected $attrs = [];
+
+    /**
+     * 实例是否隔离，一旦隔离后，一个实例加载（映射）记录后，将不允许再加载另外一条数据
+     * （数据加载后不允许修改主键值），从而避免主键值可随意修改导致加载的记录和更新的记录
+     * 不是同一条记录
+     * @var bool
+     */
+    protected $isInstanceApart = true;
             
     /**
      * 初始化表对象实例
      * 
      * 约定：如果集成模型基类后重写构造函数，必须在构造函数中调用父类的构造函数 parent::__construct();
-     * 
+     *
+     * @throws \wf\model\Exception
      */
     public function __construct() {
         if (!$this->table) {
-            throw new \wf\model\Exception('请设置模型类"' . get_class($this) . '"对应的表');
+            throw new Exception('请设置模型类"' . get_class($this) . '"对应的表');
         }
         
         // 获取表结构并缓存
@@ -261,6 +270,19 @@ class Model extends Business {
      * @throws \wf\model\Exception
      */
     protected function setAttrVal($name, $value) {
+        // 数据保护
+        if ($this->isInstanceApart && $this->isLoaded()) {
+            $pk = $this->getPk();
+            if((is_array($pk) && array_key_exists(strtolower($name), $pk) && $this->getPkv()[$name] != $value)
+                || (is_scalar($pk) && strtolower($name) == strtolower($pk) && $this->getPkv() != $value)) {
+                $msg = "The primarykey '{$name}' is readonly, if you want to change "
+                    . "it In any case, you must new another instance of " . get_class($this)
+                    . " or set the 'isInstanceApart' as false.";
+                throw new Exception($msg);
+            }
+
+        }
+
         if (property_exists($this, $name)) {
             // 已定义私有属性，只允许通过setter方法来设置值
             $setter = 'set' . $name;
@@ -484,11 +506,6 @@ class Model extends Business {
     public function create() {    
         $data = $this->toArray();
         
-        // 按设置的验证规则验证属性
-        if (!$this->validate($data, $this->validRules())) {
-            return false;
-        }
-        
         $arg = [$this->table, $this->fieldSet($data)];
         $sql = "INSERT INTO %t SET %x";
         $exe = $this->getDb()->exec($sql, $arg);
@@ -528,11 +545,6 @@ class Model extends Business {
      */
     public function replace() {
         $data = $this->toArray();
-    
-        // 按设置的验证规则验证属性
-        if (!$this->validate($data, $this->validRules())) {
-            return false;
-        }
         
         $arg = [$this->table, $this->fieldSet($data)];
         $sql = "REPLACE INTO %t SET %x";
@@ -566,13 +578,6 @@ class Model extends Business {
      * 更新记录
      */
     public function update() {
-        $data = $this->toArray();
-    
-        // 按设置的验证规则验证属性
-        if (!$this->validate($data, $this->validRules())) {
-            return false;
-        }
-        
         return $this->updateBy($this->toArray(), $this->pkvWhere());
     }
     
@@ -617,7 +622,7 @@ class Model extends Business {
     /**
      * 查询获取模型表记录
      * @param array $opts = [] 查询选项(详看\wf\db\QueryBuilder::buildQueryOptions())
-     * @return \wf\db\Find
+     * @return \wf\db\Finder
      */
     public function find($opts = []) {
         empty($opts['table']) && $opts['table'] = $this->table;
@@ -780,5 +785,22 @@ class Model extends Business {
      */
     public function validRules() {
         return [];
+    }
+
+    /**
+     * 检验属性值是否正确匹配$this->validRules()中设置的规则
+     * @return bool
+     */
+    public function doValidRules()
+    {
+        return parent::validate($this->toArray(), $this->validRules());
+    }
+
+    /**
+     * @param bool $isInstanceApart
+     */
+    public function setIsInstanceApart($isInstanceApart)
+    {
+        $this->isInstanceApart = $isInstanceApart;
     }
 }

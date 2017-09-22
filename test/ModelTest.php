@@ -57,7 +57,25 @@ class ModelValidTestModel extends ModelTestModel
             ],
         ];
     }
-    
+
+    public function create()
+    {
+        if (!$this->doValidRules()) {
+            return false;
+        }
+
+        return parent::create();
+    }
+
+    public function update()
+    {
+        if (!$this->doValidRules()) {
+            return false;
+        }
+
+        return parent::update();
+    }
+
 }
 
 class ModelMKTestModel extends Model {
@@ -136,6 +154,7 @@ class ModelTest extends PHPUnit_Framework_TestCase
         wfDb()->exec("REPLACE INTO phpunit_test_table VALUE (1, 'cmpan', '123456', 'emall@xx.com', 'desc')");
         
         $this->model = new ModelTestModel();
+        $this->model->setIsInstanceApart(false);
     }
     
     /**
@@ -442,7 +461,51 @@ class ModelTest extends PHPUnit_Framework_TestCase
             ['uname', $name],
             ['desc', $desc],
         ]);
-        $this->assertTrue($loaded);        
+        $this->assertTrue($loaded);
+
+        $data1 = [
+            'uname' => 'erzh-x1',
+            'pw'    => '123456',
+            'email' => '',
+            'desc'  => '',
+        ];
+
+        $data2 = [
+            'uname' => 'erzh-x2',
+            'pw'    => '111111',
+            'email' => '',
+            'desc'  => '',
+        ];
+
+        $pk1 = $this->model->fromArray($data1)->create();
+        $pk2 = $this->model->fromArray($data2)->create();
+
+        $m1 = new ModelTestModel();
+        $m1->setIsInstanceApart(false);
+        $m1->setPkv($pk1)->load();
+
+        print "m1: \n";
+        print_r($m1->toArray());
+
+        $m1->pw = '99999999';
+        $m1->desc = '8888888';
+        $m1->setPkv($pk2)->update();
+
+
+        $m2 = new ModelTestModel();
+        $m2->setIsInstanceApart(false);
+        $m2->setPkv($pk2)->load();
+
+        print "m2: \n";
+        print_r($m2->toArray());
+
+
+        $m1x = new ModelTestModel();
+        $m1x->setPkv($pk1)->load();
+
+        print "m1x: \n";
+        print_r($m1x->toArray());
+
     }
     
     /**
@@ -609,6 +672,7 @@ class ModelTest extends PHPUnit_Framework_TestCase
     
     public function testValidate() {
         $obj = new ModelValidTestModel();
+        $obj->setIsInstanceApart(false);
         $data = [
             'desc' => '111'
         ];

@@ -91,7 +91,6 @@ abstract class Business
      *   &nbsp;&nbsp;...
      *   ]
      * </pre>
-     * @param bool $firstErrBreak = false 是否在验证出现第一次不符合规则时返回，为false则验证所有规则
      * @return bool 验证是否通过
      */
     protected function validate(array $data, array $validRules) {
