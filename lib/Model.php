@@ -138,7 +138,7 @@ class Model extends Business {
      * @return mixed
      * @throws \wf\model\Exception
      */
-    public function __get($name) {        
+    public function &__get($name) {
         return $this->getAttrVal($name);
     }
     
@@ -235,7 +235,7 @@ class Model extends Business {
      * @return mixed
      * @throws \wf\model\Exception
      */
-    protected function getAttrVal($name) {
+    protected function &getAttrVal($name) {
         if (property_exists($this, $name)) {
             // 已定义私有属性，外部只允许通过getter读取
             $getter = 'get' . ucfirst($name);
@@ -245,10 +245,10 @@ class Model extends Business {
             // no getter
             throw new Exception("Property '{$name}' access denied.");
         }
-        
+
         $name = strtolower($name);
-        
-        if($this->fieldMap && key_exists($name, $this->fieldMap)) {            
+
+        if($this->fieldMap && key_exists($name, $this->fieldMap)) {
             $attr = $this->fieldMap[$name];
             $getter = 'get' . $attr;
             // 已定义私有属性，外部只允许通过getter读取
@@ -257,9 +257,16 @@ class Model extends Business {
             }
             // 已声明非public属性外部只允许通过setter/getter访问
             throw new Exception("Property '{$name}' => '{$attr}' access denied.");
-        } else {
-            return isset($this->attrs[$name]) ? $this->attrs[$name] : null;
+        } elseif(!isset($this->attrs[$name])) {
+            $this->attrs[$name] = null;
         }
+
+        // Indirect modification of overloaded property XXX has no effect 解决办法：
+        // 1、直接返回属性$this->attrs[$name]
+        //    不能返回重新定义的变量，否则 $m->aa['xx'] = 123 赋值出错
+        //    为null时，先$this->attrs[$name] = null在返回，不能直接返回 null值，否则当 $m->aa 未定义时，$m->aa['xx'] = 123 赋值出错
+        // 2、给方法加上引用
+        return $this->attrs[$name];
     }
     
     /**
@@ -668,7 +675,6 @@ class Model extends Business {
     /**
      * 保存指定的属性（字段）值
      * @param string $fields 字段名列表，多个字段以逗号隔开
-     * @param bool $reset = false 是否重置实例对应的属性值
      * @return boolean
      * @throws \wf\model\Exception
      */
@@ -797,6 +803,9 @@ class Model extends Business {
     }
 
     /**
+     * 实例是否隔离，一旦隔离后，一个实例加载（映射）记录后，将不允许再加载另外一条数据
+     * （数据加载后不允许修改主键值），从而避免主键值可随意修改导致加载的记录和更新的记录
+     * 不是同一条记录
      * @param bool $isInstanceApart
      */
     public function setIsInstanceApart($isInstanceApart)

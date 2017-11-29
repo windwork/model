@@ -48,12 +48,22 @@ class ModelValidTestModel extends ModelTestModel
     public function validRules() {
         return [
             'email' => [
-                'email' => '邮箱格式有误！'
+                'email' => true,
+                'message' => '邮箱格式有误！'
             ],
             'pw' => [
-                'required' => '密码不能为空',
-                'minLen' => ['msg' => '最短6位', 'minLen' => 6],
-                'maxLen' => ['msg' => '最长20位', 'maxLen' => 20],
+                [
+                    'required' => true,
+                    'message' => '密码不能为空'
+                ],
+                [
+                    'minLen' => 6,
+                    'message' => '最短6位',
+                ],
+                [
+                    'maxLen' => 20,
+                    'message' => '最长20位',
+                ],
             ],
         ];
     }
@@ -677,7 +687,9 @@ class ModelTest extends PHPUnit_Framework_TestCase
             'desc' => '111'
         ];
         // 密码为空
-        $this->assertFalse($obj->fromArray($data)->create());
+        $obj->fromArray($data);
+        $doCreate = $obj->create();
+        $this->assertFalse($doCreate);
         
         // 密码小于6位
         $obj->resetError();
@@ -704,7 +716,61 @@ class ModelTest extends PHPUnit_Framework_TestCase
         $data['email'] = 'dsd@xx.cc';
         $this->assertTrue((bool)$obj->fromArray($data)->create());
     }
-    
+
+    public function testSetGet()
+    {
+        $m = new ModelTestModel();
+
+        // 设置、读取
+        $name = uniqid();
+        $this->assertNull($m->$name);
+
+        // 数字
+        $val = 111;
+        $m->$name = $val;
+        $this->assertTrue($val === $m->$name);
+
+        // 字符串
+        $val = 'string';
+        $m->$name = $val;
+        $this->assertTrue($val === $m->$name);
+
+        // 数组
+        $val = [11, 22, 'xxx'];
+        $m->$name = $val;
+        $this->assertTrue($val === $m->$name);
+
+        $val = false;
+        $m->$name = $val;
+        $this->assertTrue($val === $m->$name);
+
+        // =========
+        // 设置测试数组
+        $arr = [
+            'a1' => [11, 22, 33],
+            'a2' => [44, 'str' => "解耦机身防抖"]
+        ];
+        $m->testArrChildAttr = $arr;
+        $this->assertTrue($m->testArrChildAttr === $arr);
+
+        $a1 = [44, 55, 66];
+        $m->testArrChildAttr['a1'] = $a1; // !!!!
+        $ret = $m->testArrChildAttr['a1'];
+        $this->assertTrue($a1 === $ret);
+
+        // 给不存在的下标赋值
+        $hi = [99, 55, 66, 77];
+        $m->testArrChildAttr['hi'] = $hi;  // !!!!
+        $ret = $m->testArrChildAttr['hi'];
+        $this->assertTrue($hi === $ret);
+
+        // 属性未定义，当已定义数组访问子元素
+        $m->emptyArr['hi'] = $hi; // !!!!
+        $ret = $m->emptyArr['hi'];
+        $this->assertTrue($hi === $ret);
+
+    }
+
     /**
      * Tests Model->getTable()
      */
