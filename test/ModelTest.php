@@ -43,7 +43,7 @@ class ModelTestModel extends Model
 
 }
 
-class ModelValidTestModel extends ModelTestModel 
+class ModelValidTestModel extends ModelTestModel
 {
     public function validRules() {
         return [
@@ -70,7 +70,7 @@ class ModelValidTestModel extends ModelTestModel
 
     public function create()
     {
-        if (!$this->doValidRules()) {
+        if (!$this->runValidRules()) {
             return false;
         }
 
@@ -79,7 +79,7 @@ class ModelValidTestModel extends ModelTestModel
 
     public function update()
     {
-        if (!$this->doValidRules()) {
+        if (!$this->runValidRules()) {
             return false;
         }
 
@@ -90,38 +90,38 @@ class ModelValidTestModel extends ModelTestModel
 
 class ModelMKTestModel extends Model {
     protected $table = 'phpunit_test_table_mk';
-        
+
 }
 
-class ModelTestModel2 extends ModelTestModel 
+class ModelTestModel2 extends ModelTestModel
 {
     protected $userName;
     protected $password;
-    
+
     protected $noSeterGetter = 1;
-    
-    public function getUserName() 
+
+    public function getUserName()
     {
         return $this->userName;
     }
-    
-    public function getPassword() 
+
+    public function getPassword()
     {
         return $this->password;
     }
-    
-    public function setUserName($userName) 
+
+    public function setUserName($userName)
     {
         $this->userName = $userName;
         return $this;
     }
-    
-    public function setPassword($password) 
+
+    public function setPassword($password)
     {
         $this->password = $password;
         return $this;
     }
-    
+
     protected $fieldMap = [
         'uname' => 'userName',
         'pw'    => 'password',
@@ -134,20 +134,20 @@ class ModelTestModel2 extends ModelTestModel
  */
 class ModelTest extends PHPUnit_Framework_TestCase
 {
-    
+
     /**
      *
      * @var Model
      */
     private $model;
-    
+
     /**
      * Prepares the environment before running a test.
      */
-    protected function setUp() 
+    protected function setUp()
     {
         parent::setUp ();
-        
+
         // 新建测试表
         $sql = "
         DROP TABLE IF EXISTS phpunit_test_table;
@@ -160,40 +160,40 @@ class ModelTest extends PHPUnit_Framework_TestCase
             PRIMARY KEY (`id`)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8;";
         wfDb()->exec($sql);
-        
+
         wfDb()->exec("REPLACE INTO phpunit_test_table VALUE (1, 'cmpan', '123456', 'emall@xx.com', 'desc')");
-        
+
         $this->model = new ModelTestModel();
-        $this->model->setIsInstanceApart(false);
+        $this->model->setInstanceApart(false);
     }
-    
+
     /**
      * Cleans up the environment after running a test.
      */
-    protected function tearDown() 
+    protected function tearDown()
     {
         $this->model = null;
-        
+
         // 删除测试表
         $sql = "DROP TABLE IF EXISTS phpunit_test_table;
                 DROP TABLE IF EXISTS phpunit_test_table_mk;";
-        wfDb()->exec($sql);    
-        
+        wfDb()->exec($sql);
+
         parent::tearDown ();
-            
+
     }
-    
+
     /**
      * Tests Model->setPkv()
      */
-    public function testSetPkv() 
+    public function testSetPkv()
     {
         $this->model->setPkv(1);
 
         // 通过主键名或getPkv()都可以获取到主键值
         $this->assertEquals(1, $this->model->id);
         $this->assertEquals(1, $this->model->getPkv());
-        
+
         // 主键为数组
         $sql = "
         DROP TABLE IF EXISTS phpunit_test_table_mk;
@@ -206,7 +206,7 @@ class ModelTest extends PHPUnit_Framework_TestCase
             PRIMARY KEY (`pk1`,pk2)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8;";
         wfDb()->exec($sql);
-        
+
         $objMK = new ModelMKTestModel();
         $objMK->fromArray([
             'pk1' => 123,
@@ -216,19 +216,19 @@ class ModelTest extends PHPUnit_Framework_TestCase
             'desc' => 'sdfsf',
         ])->create();
         $rPkv = $objMK->getPkv();
-        
+
         $objMK2 = new ModelMKTestModel();
         $objMK2->setPkv($rPkv)->load();
         $rData = $objMK2->toArray();
         $this->assertEquals('123456', $rData['pw']);
         $this->assertEquals('xx@x.cc', $rData['email']);
         $this->assertEquals('sdfsf', $rData['desc']);
-        
+
         // replace
         // 只有主键为非自增的时候，才能在创建时指定主键
         $mpk = [
             'pk1' => 999,
-            'pk2' => 888,            
+            'pk2' => 888,
         ];
         $data = $mpk + [
             'pw' => '123456',
@@ -237,20 +237,20 @@ class ModelTest extends PHPUnit_Framework_TestCase
         ];
         $objMK2 = new ModelMKTestModel();
         $objMK2->fromArray($data)->replace();
-        
+
         $isExist = (new ModelMKTestModel())->setPkv($mpk)->isExist();
         $this->assertTrue($isExist);
-        
+
         $objMK3 = new ModelMKTestModel();
         $objMK3->setPkv($mpk)->load();
         $this->assertEquals('xxxdes', $objMK3->desc);
         $this->assertEquals('xx@x.cc', $objMK3->email);
     }
-    
+
     /**
      * Tests Model->load()
      */
-    public function testLoad() 
+    public function testLoad()
     {
         // 必须设置主键值才能load
         try {
@@ -258,86 +258,86 @@ class ModelTest extends PHPUnit_Framework_TestCase
             $this->model->load();
         } catch (\Exception $e) {
             $err = $e->getMessage();
-        }        
+        }
         $this->assertNotEmpty($err);
-        
+
         $this->model->setPkv(1);
         $this->model->load();
 
         $this->assertEquals('cmpan', $this->model->uname);
     }
-    
+
     /**
      * Tests Model->loadBy()
      */
-    public function testLoadBy() 
-    {        
+    public function testLoadBy()
+    {
         $this->assertTrue($this->model->loadBy(['uname', 'cmpan']));
     }
-    
+
     /**
      * Tests Model->fromArray()
      */
-    public function testFromArray() 
+    public function testFromArray()
     {
         $data = [
             'a' => 123,
             'b' => 'hijok',
         ];
-        
+
         $this->model->fromArray($data);
-        
+
         foreach ($data as $key => $val) {
             $this->assertEquals($val, $this->model->$key);
         }
     }
-    
+
     /**
      * Tests Model->isExist()
      */
-    public function testIsExist() 
+    public function testIsExist()
     {
         $this->assertFalse($this->model->setPkv(9999)->isExist());
         $this->assertTrue($this->model->setPkv(1)->isExist());
     }
-    
+
     /**
      * Tests Model->getPkv()
      */
-    public function testGetPkv() 
+    public function testGetPkv()
     {
         $this->model->loadBy(['uname', 'cmpan']);
         $this->assertEquals('1', $this->model->getPkv());
     }
-    
+
     /**
      * Tests Model->getPk()
      */
-    public function testGetPk() 
+    public function testGetPk()
     {
         $this->assertEquals('id', $this->model->getPk());
     }
-    
+
     /**
      * Tests Model->toArray()
      */
-    public function testToArray() 
+    public function testToArray()
     {
         $data = [
             'a' => 123,
             'b' => 'hijok',
         ];
-        
+
         $this->model->fromArray($data);
-        
+
         $arr = $this->model->toArray();
-        
+
         foreach ($data as $key => $val) {
             $this->assertEquals($val, $arr[$key]);
         }
 
         $obj2 = new ModelTestModel2();
-        
+
         // 动态属性set/get/unset/isset
         $obj2->dVar = 110;
         $this->assertEquals(110, $obj2->dVar);
@@ -352,7 +352,7 @@ class ModelTest extends PHPUnit_Framework_TestCase
             $allowGet = false;
         }
         $this->assertFalse($allowGet);
-        
+
         $allowGet = true;
         try {
             $x = $obj2->noSeterGetter; // 私有属性没有setter/getter，访问将抛出异常
@@ -360,12 +360,12 @@ class ModelTest extends PHPUnit_Framework_TestCase
             $allowGet = false;
         }
         $this->assertFalse($allowGet);
-        
+
         // userName属性映射到uname字段
         // password属性映射到pw字段
         $obj2->setUserName('cm');
         $obj2->setPassword('123456');
-        
+
         // toArray
         $obj2->xyz = 112358;
         $data = $obj2->toArray();
@@ -374,71 +374,71 @@ class ModelTest extends PHPUnit_Framework_TestCase
         // 属性映射到字段后，可用字段名读取到属性值
         $this->assertEquals('cm', $obj2->uname);
         // 动态属性名不区分大小写
-        $this->assertEquals('cm', $obj2->uName); 
+        $this->assertEquals('cm', $obj2->uName);
         $this->assertEquals('123456', $obj2->pw);
-        
+
         // 属性映射到字段后，修改字段值，属性值也跟着变
         $obj2->pw = '654321'; // pw字段映射到 private $password; 通过 public setPassword($password) 访问
         $this->assertEquals('654321', $obj2->pw);
         $this->assertEquals('654321', $obj2->getPassword());
         $this->assertEquals('654321', $obj2->password);
 
-        
+
         // 私有属性定义有对应的setter/getter方法，可以自动通过setter/getter访问
         $obj2->password = '456123'; // private $password; 通过 public setPassword($password) 访问
         $this->assertEquals('456123', $obj2->pw);
         $this->assertEquals('456123', $obj2->getPassword());
         $this->assertEquals('456123', $obj2->password);
-                
+
         // isset
         $this->assertFalse(isset($obj2->qqqq)); // 不存在并且未动态赋值的属性
         $this->assertFalse(isset($obj2->noSeterGetter)); // private $noSeterGetter属性没有getter方法不能访问
         $this->assertTrue(isset($obj2->pw)); // $obj2->password
         $this->assertTrue(isset($obj2->password)); // private $password属性有getter方法可访问
-        
+
         // unset
         unset($obj2->uname);//unset动态属性，映射属性受影响
         $this->assertEquals(null, $obj2->userName);
-        
+
         unset($obj2->password);//unset映射属性，动态属性受影响
         $this->assertEquals(null, $obj2->pw);
     }
-    
+
     /**
      * Tests Model->delete()
      */
-    public function testDelete() 
+    public function testDelete()
     {
         $id = $this->testCreate();
-        
-        $m2 = new ModelTestModel();        
+
+        $m2 = new ModelTestModel();
         $m2->setPkv($id);
         $this->assertTrue($m2->load());
-        
+
         $this->assertTrue((bool)$m2->delete());
 
         $m3 = new ModelTestModel();
         $m3->setPkv($id);
         $this->assertFalse($m3->load());
     }
-    
+
     /**
      * Tests Model->deleteBy()
      */
-    public function testDeleteBy() 
+    public function testDeleteBy()
     {
         $id = $this->testCreate();
-        
+
         $this->assertTrue($this->model->loadBy(['id', $id]));
         $this->model->deleteBy(['id', $id]);
-        
-        $this->assertFalse($this->model->loadBy(['id', $id]));        
+
+        $this->assertFalse($this->model->loadBy(['id', $id]));
     }
-    
+
     /**
      * Tests Model->create()
      */
-    public function testCreate() 
+    public function testCreate()
     {
         $data = [
             'uname' => 'erzh',
@@ -447,16 +447,16 @@ class ModelTest extends PHPUnit_Framework_TestCase
             'desc'  => 'test',
         ];
         $isSaved = $this->model->fromArray($data)->create();
-        
+
         $this->assertNotEmpty($isSaved);
-        
+
         return $this->model->getPkv();
     }
-    
+
     /**
      * Tests Model->update()
      */
-    public function testUpdate() 
+    public function testUpdate()
     {
         $this->testCreate();
 
@@ -465,7 +465,7 @@ class ModelTest extends PHPUnit_Framework_TestCase
         $this->model->uname = $name;
         $this->model->desc = $desc;
         $this->model->update();
-        
+
         // 修改uname、desc为unique值后，根据修改后的属性能查出数据
         $loaded = $this->model->loadBy([
             ['uname', $name],
@@ -491,7 +491,7 @@ class ModelTest extends PHPUnit_Framework_TestCase
         $pk2 = $this->model->fromArray($data2)->create();
 
         $m1 = new ModelTestModel();
-        $m1->setIsInstanceApart(false);
+        $m1->setInstanceApart(false);
         $m1->setPkv($pk1)->load();
 
         print "m1: \n";
@@ -503,7 +503,7 @@ class ModelTest extends PHPUnit_Framework_TestCase
 
 
         $m2 = new ModelTestModel();
-        $m2->setIsInstanceApart(false);
+        $m2->setInstanceApart(false);
         $m2->setPkv($pk2)->load();
 
         print "m2: \n";
@@ -517,44 +517,44 @@ class ModelTest extends PHPUnit_Framework_TestCase
         print_r($m1x->toArray());
 
     }
-    
+
     /**
      * Tests Model->save()
      */
-    public function testSave() 
+    public function testSave()
     {
         $obj1 = clone $this->model;
         $obj2 = clone $this->model;
         $obj3 = clone $this->model;
-        
+
         // create
         $this->model->fromArray([
             'uname' => 'xxx',
             'pw' => '123456',
         ]);
         $this->model->save();
-        
-        // update        
+
+        // update
         $this->model->save();
-        
+
         $obj1->setPkv($this->model->getPkv())->load();
         $this->assertEquals('xxx', $obj1->uname);
         $this->assertEquals('123456', $obj1->pw);
     }
-    
+
     /**
      * Tests Model->find()
      */
-    public function testFind() 
-    {        
+    public function testFind()
+    {
         $obj = $this->model->find();
         $this->assertTrue($obj instanceof \wf\db\Finder);
     }
-    
+
     /**
      * Tests Model->updateBy()
      */
-    public function testUpdateBy() 
+    public function testUpdateBy()
     {
         $data = [
             'uname' => uniqid(),
@@ -563,9 +563,9 @@ class ModelTest extends PHPUnit_Framework_TestCase
             'desc'  => 'test',
         ];
         $isCreated = $this->model->fromArray($data)->create();
-        
+
         $this->assertNotEmpty($isCreated);
-        
+
         $desc = '255dsds第';
         $this->model->updateBy(['desc' => $desc], [
             ['uname', $data['uname']],
@@ -576,11 +576,11 @@ class ModelTest extends PHPUnit_Framework_TestCase
         $m->setPkv($this->model->getPkv())->load();
         $this->assertEquals($desc, $m->desc);
     }
-    
+
     /**
      * Tests Model->saveFields()
      */
-    public function testSaveFields() 
+    public function testSaveFields()
     {
         $this->testCreate();
         $name = uniqid();
@@ -588,12 +588,12 @@ class ModelTest extends PHPUnit_Framework_TestCase
         $desc = uniqid();
 
         $this->model->uname = $name;
-        $this->model->pw = $pw; 
+        $this->model->pw = $pw;
         $this->model->desc = $desc;
-        
+
         // 保存uname,pw
         $this->model->saveFields('uname,pw');
-        
+
         $whereArr = [
             ['uname', $name],
             ['pw', $pw],
@@ -601,25 +601,25 @@ class ModelTest extends PHPUnit_Framework_TestCase
         $m = new ModelTestModel();
         $isLoaded = $m->loadBy($whereArr);
         $this->assertNotEmpty($isLoaded);
-        
+
         // uname,pw更新了，但desc没更新
         $this->assertNotEquals($desc, $m->desc);
         $this->assertEquals('test', $m->desc);
     }
-    
+
     /**
      * Tests Model->addLockFields()
      */
-    public function testAddLockFields() 
+    public function testAddLockFields()
     {
         // 锁定字段后不能添加或更新
         $this->model->addLockFields('email,pw'); // 锁定email,pw字段
         $id = $this->testCreate();
-        
+
         $this->model->setPkv($id)->load();
         $this->assertEmpty($this->model->email);
         $this->assertEmpty($this->model->pw);
-        
+
         // 可更新email字段，不可更新pw字段
         $this->model->removeLockFields('email'); // 解锁email字段
         $this->model->email = '123888@xx.com';
@@ -630,59 +630,59 @@ class ModelTest extends PHPUnit_Framework_TestCase
         $m3->setPkv($id)->load();
         $this->assertEmpty($m3->pw); // pw不可更新
         $this->assertNotEmpty($m3->email); // email更新
-        
-        
+
+
         // 可设置email字段值，不可设置pw字段值
-        $id = $this->testCreate();        
+        $id = $this->testCreate();
         $this->model->setPkv($id)->load();
         $this->assertNotEmpty($this->model->email);
         $this->assertEmpty($this->model->pw);
 
         $this->model->removeLockFields('pw');  // 解锁pw字段
-        
+
         // 字段解锁后可新增
         $id = $this->testCreate();
         $this->model->setPkv($id)->load();
         $this->assertNotEmpty($this->model->email);
         $this->assertNotEmpty($this->model->pw);
-        
+
         // 字段解锁后可修改
         $this->model->email = 'xxx@qq.com';
         $this->model->pw = '654321';
         $this->model->save();
-        
+
         $m3 = new ModelTestModel();
         $m3->setPkv($id)->load();
         $this->assertEquals($this->model->email, $m3->email);
         $this->assertEquals($this->model->pw, $m3->pw);
     }
-    
+
     /**
      * Tests Model->isLoaded()
      */
-    public function testIsLoaded() 
+    public function testIsLoaded()
     {
         // 1、新增后为loaded
         $this->testCreate();
         $this->assertTrue($this->model->isLoaded());
-        
+
         // 2、加载后为loaded
         $m2 = new ModelTestModel();
         $m2->setPkv($this->model->getPkv())->load();
         $this->assertTrue($m2->isLoaded());
-        
+
         // 3、Model::fromArray()强制为loaded
         $m3 = new ModelTestModel();
         $m3->fromArray([1, 2, 3], 1);
         $this->assertFalse($m3->isLoaded()); // 没设置主键值，强制设置loaded无效
-        
+
         $m3->fromArray(['id' => 12580], 1);
         $this->assertTrue($m3->isLoaded()); // 设置了主键值，强制设置loaded才有效
     }
-    
+
     public function testValidate() {
         $obj = new ModelValidTestModel();
-        $obj->setIsInstanceApart(false);
+        $obj->setInstanceApart(false);
         $data = [
             'desc' => '111'
         ];
@@ -690,23 +690,23 @@ class ModelTest extends PHPUnit_Framework_TestCase
         $obj->fromArray($data);
         $doCreate = $obj->create();
         $this->assertFalse($doCreate);
-        
+
         // 密码小于6位
         $obj->resetError();
         $data['pw'] = '123';
         $this->assertFalse($obj->fromArray($data)->create());
 
-        
+
         // 密码超过20位
         $obj->resetError();
         $data['pw'] = 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx';
         $this->assertFalse($obj->fromArray($data)->create());
-        
+
         // 密码合法
         $obj->resetError();
         $data['pw'] = '123456';
         $this->assertTrue((bool)$obj->fromArray($data)->create());
-        
+
         // 邮箱格式不合法
         $obj->resetError();
         $data['email'] = '123456';
@@ -774,7 +774,7 @@ class ModelTest extends PHPUnit_Framework_TestCase
     /**
      * Tests Model->getTable()
      */
-    public function testGetTable() 
+    public function testGetTable()
     {
         $this->assertEquals('phpunit_test_table', $this->model->getTable());
     }
