@@ -3,20 +3,20 @@ define('WF_IN', 1);
 
 require_once '../../util/lib/Validator.php';
 require_once '../lib/Error.php';
-require_once '../lib/Business.php';
+require_once '../lib/Model.php';
 
-use wf\model\Business;
+use wf\model\Model;
 
-class ModelNoTable extends Business {
+class ModelNoTable extends Model {
     public function test() {
         return $this->validate(['attr' => ''], ['attr' => ["required" => true, 'message' => "请输入attr"]]);
     }
 }
 
 /**
- * Business test case.
+ * Base test case.
  */
-class BusinessTest extends PHPUnit_Framework_TestCase {
+class ModelNoDBTest extends PHPUnit_Framework_TestCase {
 
     /**
      *

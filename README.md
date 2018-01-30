@@ -1,6 +1,6 @@
 Windwork 模型组件
 =========================
-Windwork模型基类\wf\model\Business不包含数据库库的访问。
+Windwork模型基类\wf\model\Base不包含数据库库的访问。
 Windwork领域模型\wf\model\Model可访问数据库。
 
 Windwork Model领域模型有如下特性：
@@ -33,7 +33,7 @@ composer require windwork/wf
 
 类命名为：XxxModel,类名以大写开头，Model作为后缀，使用驼峰命名规则。
 文件名为：XxxModel.php,类名后面加.php，大小写敏感；
-需要继承：需要数据库读写的模型继承\wf\model\Model类，实现业务逻辑但不需要数据存取的继承\wf\model\Business类；
+需要继承：需要数据库读写的模型继承\wf\model\Model类，实现业务逻辑但不需要数据存取的继承\wf\model\Base类；
 对应表类：protected $table = '数据表名称';
 ```
 
@@ -91,7 +91,7 @@ class UserModel extends \wf\model\Model {
      * 属性和表字段的绑定
      * 
      * 设置表字段对应模型类的属性，以实现把类属性绑定到表字段，并且Model->toArray()方法可获取绑定属性的值。
-     * 表字段名不分大小写，属性名大小写敏感。
+     * 表字段名和属性名都是大小写敏感。
      * 
      * @var array = [
      *     '表字段1' => '属性1',
@@ -99,7 +99,7 @@ class UserModel extends \wf\model\Model {
      *     ...
      * ]
      */
-    protected $fieldMap = [
+    protected $columnMap = [
         'uname' => 'userName', // 把字段uname映射到name属性，属性名和字段名可以不一样
     ];
 

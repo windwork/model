@@ -15,18 +15,36 @@ namespace wf\model;
  * 我们采用Active Record(活动记录)架构模式实现领域模型层，特点是一个模型类对应关系型数据库中的
  * 一个表，而模型类的一个实例对应表中的一行记录，封装了数据访问，并在这些记录上增加了领域逻辑。
  *
+ * ## 关于模型数据
+ * - 未声明模型属性保存到Model::$attrs中
+ * - Model::$attrs已定义元素才能访问，未定义抛出异常
+ * - 表字段-模型属性映射：
+ *   1）数据保存在模型对象属性；
+ *   2）字段名方式访问则指向对象属性，不管属性是不是public类型都能访问；
+ * - 重载属性与私有属性冲突，如果重载属性与私有属性同名，则重载访问属性时抛出异常。
+ * - 不自动通过setter/getter访问重载属性元素，如访问$m->attr，重载获取数据时不去调用$m->getAttr()
+ *
  * @package     wf.model
  * @author      cm <cmpan@qq.com>
  * @link        http://docs.windwork.org/manual/wf.model.html
  * @since       0.1.0
  */
-class Model extends Business {
+class Model {
     /**
      * 模型对应数据表名
      *
      * @var string = ''
      */
     protected $table = '';
+
+    /**
+     * 是否是数据模型
+     * - 只有在实现类中定义模型的$table属性的初始值，才是数据模型
+     * - 数据模型绑定对应的数据库实例，可调用模型实例本身的CRUD操作
+     * - 非数据模型不能调用模型实例本身的CRUD操作
+     * @var bool
+     */
+    private $isDataModel = true;
 
     /**
      * 请不要覆盖此属性，生成对象后自动给该变量赋值
@@ -40,10 +58,11 @@ class Model extends Business {
     ];
 
     /**
-     * 表字段绑定属性
+     * 表字段绑定到显式声明的属性
      *
-     * 设置表字段对应模型类的属性，以实现把类属性绑定到表字段，并且Model->toArray()方法可获取绑定属性的值。
-     * 表字段名不分大小写，属性名大小写敏感。
+     * - 设置表字段对应模型类的属性，以实现把类属性绑定到表字段，并且Model->toArray()方法可获取绑定属性的值。
+     * - 表字段名和属性名都是大小写敏感。
+     * - 字段绑定属性后，属性值必能访问，可通过“$obj->字段名”或“$obj->属性名”访问。
      * <pre>格式为：
      * [
      *     '表字段1' => '属性1',
@@ -52,7 +71,7 @@ class Model extends Business {
      * ]</pre>
      * @var array = []
      */
-    protected $fieldMap = [];
+    protected $columnMap = [];
 
     /**
      * 模型是否已从数据库加载（通过Model->load()或Model->loadBy()加载）
@@ -87,6 +106,99 @@ class Model extends Business {
      */
     protected $isInstanceApart = true;
 
+
+    /**
+     * 错误信息
+     * @var \wf\model\Error
+     */
+    protected $error;
+
+    /**
+     * 获取错误信息
+     *
+     * @return \wf\model\Error
+     */
+    public function getError()
+    {
+        return $this->error;
+    }
+
+    /**
+     * 是否有错误
+     *
+     * @return bool
+     */
+    public function hasError()
+    {
+        return isset($this->error);
+    }
+
+    /**
+     * 重置错误信息（将错误信息属性设为null）
+     * @return \wf\model\Model
+     */
+    public function resetError()
+    {
+        $this->error = null;
+        return $this;
+    }
+
+    /**
+     * 设置错误信息
+     *
+     * @param string|\wf\model\Error $error 错误消息内容
+     * @param int $code = 90000 错误码，如果$error参数是\wf\model\Error实例，则忽略此参数
+     * @return \wf\model\Model
+     */
+    public function setError($error, $code = \wf\model\Error::DEFAULT_MODEL_ERROR_CODE)
+    {
+        if ($error instanceof \wf\model\Error) {
+            $this->error = $error;
+        } elseif (is_scalar($error)) {
+            $this->error = new \wf\model\Error($error, $code);
+        } else {
+            throw new \InvalidArgumentException('错误的消息类型');
+        }
+
+        return $this;
+    }
+
+    /**
+     * 验证输入规则
+     *
+     * 如果验证不符合规则，则将错误信息赋值给模型错误信息属性
+     *
+     * @param array $data 待验证数据，[属性 => 值] 结构
+     * @param array $validRules 支持的验证方法请参看\wf\util\Validator类
+     * <pre>
+     *   验证规则格式：[
+     *   &nbsp;&nbsp;'待验证属性下标' => [
+     *   &nbsp;&nbsp;&nbsp;&nbsp;'验证方法1' => '提示信息1',
+     *   &nbsp;&nbsp;&nbsp;&nbsp;'验证方法2' => '提示信息2'
+     *   &nbsp;&nbsp;&nbsp;&nbsp;...
+     *   &nbsp;&nbsp;],
+     *   &nbsp;&nbsp;...
+     *   ]
+     * </pre>
+     * @return bool 验证是否通过
+     */
+    protected function validate(array $data, array $validRules)
+    {
+        if (!$validRules) {
+            return true;
+        }
+
+        $validObj = new \wf\util\Validator();
+        $validResult = $validObj->validate($data, $validRules, true);
+
+        if (!$validResult) {
+            $this->setError($validObj->getErrors()[0]);
+            return false;
+        }
+
+        return true;
+    }
+
     /**
      * 初始化表对象实例
      *
@@ -94,9 +206,11 @@ class Model extends Business {
      *
      * @throws \wf\model\Exception
      */
-    public function __construct() {
+    public function __construct()
+    {
         if (!$this->table) {
-            throw new Exception('请设置模型类"' . get_class($this) . '"对应的表');
+            $this->isDataModel = false;
+            return;
         }
 
         // 获取表结构并缓存
@@ -106,18 +220,13 @@ class Model extends Business {
             is_array($tableSchema['pk']) && sort($tableSchema['pk']);
 
             // tableSchema
-            $this->tableSchema['field']  = array_keys($tableSchema['field']); // 表字段名列表，为支持不区分大小写，已转小写
+            $this->tableSchema['field']  = array_keys($tableSchema['field']); // 表字段名列表
             $this->tableSchema['pk']     = $tableSchema['pk']; // 表主键名，已转为小写，如果是多个字段的主键，则为['主键1', '主键2']
             $this->tableSchema['ai']     = $tableSchema['ai'];
 
             if (function_exists('wfCache')) {
                 wfCache()->write("model/table_schema/{$this->table}", $this->tableSchema);
             }
-        }
-
-        // 使字段绑定属性的字段名不区分大小写
-        if($this->fieldMap) {
-            $this->fieldMap = array_combine(array_keys($this->fieldMap), array_values($this->fieldMap));
         }
 
         // 新增记录自动增长主键不允许设置值
@@ -127,13 +236,26 @@ class Model extends Business {
     }
 
     /**
+     * 调用不可访问方法的处理
+     * @param string $name
+     * @param mixed $args
+     * @throws \BadMethodCallException
+     */
+    public function __call($name, $args = [])
+    {
+        $message = 'Not exists method called: ' . get_called_class() . '::'.$name.'()';
+        throw new \BadMethodCallException($message);
+    }
+
+    /**
      * 获取属性
      *
      * @param string $name 获取的属性名或属性名列表
      * @return mixed
      * @throws \wf\model\Exception
      */
-    public function &__get($name) {
+    public function &__get($name)
+    {
         return $this->getAttrVal($name);
     }
 
@@ -144,7 +266,8 @@ class Model extends Business {
      * @param mixed $val
      * @return \wf\model\Model
      */
-    public function __set($name, $val) {
+    public function __set($name, $val)
+    {
         $this->setAttrVal($name, $val);
 
         return $this;
@@ -158,18 +281,11 @@ class Model extends Business {
      */
     public function __isset($name)
     {
-        $getter = 'get' . $name;
-        if (method_exists($this, $getter)) {
-            return true;
-        }
-
-        // 存在字段映射
-        if($this->fieldMap && key_exists($name, $this->fieldMap)) {
-            $attr = $this->fieldMap[$name];
-            $getter = 'get' . $attr;
-            if(method_exists($this, $getter)) {
-                return true;
-            }
+        // 存在字段映射，则被映射的对象属性必能访问
+        if($this->columnMap && key_exists($name, $this->columnMap)) {
+            // 显式声明属性名
+            $attr = $this->columnMap[$name];
+            return !is_null($this->$attr);
         }
 
         return key_exists($name, $this->attrs);
@@ -186,78 +302,48 @@ class Model extends Business {
      */
     public function __unset($name)
     {
-        // 存在setter
-        $setter = 'set' . ucfirst($name);
-        if (method_exists($this, $setter)) {
-            return $this->$setter(null);
-        }
-
         // 字段-属性映射
-        if($this->fieldMap && key_exists($name, $this->fieldMap)) {
-            $attr = $this->fieldMap[$name];
+        if($this->columnMap && key_exists($name, $this->columnMap)) {
+            $attr = $this->columnMap[$name];
             $setter = 'set' . $attr;
+
+            // 有setter则通过setter赋null值，否则直接赋null值
             if(method_exists($this, $setter)) {
                 $this->$setter(null);
-                return $this;
+            } else {
+                $this->$attr = null;
             }
-            // 已声明非public属性外部只允许通过setter/getter访问
-            throw new Exception("Property '{$name}' => '{$attr}' access denied.");
-        }
 
-        // 不存在映射字段则unset动态属性
-        unset($this->attrs[$name]);
+            return $this;
+        } else {
+            // 不存在映射字段则unset动态属性
+            unset($this->attrs[$name]);
+        }
 
         return $this;
     }
 
     /**
-     * 动态访问属性
-     * @param string $name
-     * @param mixed $args
-     * @throws \BadMethodCallException
-     */
-    public function __call($name, $args = [])
-    {
-        $message = 'Not exists method called: ' . get_called_class() . '::'.$name.'()';
-        throw new \BadMethodCallException($message);
-    }
-
-    /**
      * 获取一个属性的值
+     *
+     * （Indirect modification of overloaded property XXX has no effect 解决办法：给方法加上引用）
+     *
      * @param string $field
      * @return mixed
-     * @throws \wf\model\Exception
+     * @throws \wf\model\InvalidArgumentException
      */
-    protected function &getAttrVal($name) {
-        if (property_exists($this, $name)) {
-            // 已定义私有属性，外部只允许通过getter读取
-            $getter = 'get' . ucfirst($name);
-            if (method_exists($this, $getter)) {
-                return $this->$getter();
-            }
-
-            // 私有属性无 getter
-            throw new \InvalidArgumentException("Property '{$name}' access denied.");
-        }
-
-        if($this->fieldMap && key_exists($name, $this->fieldMap)) {
-            $attr = $this->fieldMap[$name];
-            $getter = 'get' . $attr;
-            // 已定义私有属性，外部只允许通过getter读取
-            if(method_exists($this, $getter)) {
-                return $this->$getter();
-            }
-
-            // 已声明非public属性外部只允许通过setter/getter访问
-            throw new \InvalidArgumentException("Property '{$attr}' (" . get_class($this) . '::' . "{$name}) access denied.");
-        } elseif(!isset($this->attrs[$name])) {
+    protected function &getAttrVal($name)
+    {
+        if($this->columnMap && key_exists($name, $this->columnMap)) {
+            $attr = $this->columnMap[$name];
+            return $this->$attr;
+        } elseif(property_exists($this, $name)) {
+            // 重载元素时存在同名已声明私有属性名无映射不允许重载
+            throw new \InvalidArgumentException('access non public property on __get():' . get_class($this) . '::' . $name);
+        } elseif(!key_exists($name, $this->attrs)) {
+            // 必须初始化的重载属性才能访问，提升严谨性，同时避免引用方法抛出异常
             throw new \InvalidArgumentException('property not exists:' . get_class($this) . '::' . $name);
         }
-
-        // Indirect modification of overloaded property XXX has no effect 解决办法：
-        // 1、直接返回属性$this->attrs[$name]
-        //    不能返回重新定义的变量，否则 $m->aa['xx'] = 123 赋值出错
-        // 2、给方法加上引用
 
         return $this->attrs[$name];
     }
@@ -269,7 +355,8 @@ class Model extends Business {
      * @return \wf\model\Model
      * @throws \wf\model\Exception
      */
-    protected function setAttrVal($name, $value) {
+    protected function setAttrVal($name, $value)
+    {
         // 数据保护，启用数据独立的模型，不允许重新加载数据
         if ($this->isInstanceApart && $this->isLoaded()) {
             $pk = $this->getPk();
@@ -281,28 +368,21 @@ class Model extends Business {
             }
         }
 
-        if (property_exists($this, $name)) {
-            // 已定义私有属性，只允许通过setter方法来设置值
-            $setter = 'set' . $name;
-            if(method_exists($this, $setter)) {
-                $this->$setter($value);
-                return $this;
-            }
-            // no setter
-            throw new Exception("Property '{$name}' access denied");
-        }
-
         // 表字段有对应已定义模型类属性
-        if($this->fieldMap && array_key_exists($name, $this->fieldMap)) {
-            $attr = $this->fieldMap[$name];
+        if($this->columnMap && array_key_exists($name, $this->columnMap)) {
+            $attr = $this->columnMap[$name];
             $setter = 'set' . $attr;
-            // 非公有属性只允许通过setter访问
+
             if(method_exists($this, $setter)) {
                 $this->$setter($value);
-                return $this;
+            } else {
+                $this->$attr = $value;
             }
-            // 已声明非public属性外部只允许通过setter/getter访问
-            throw new Exception("Property '{$name}' => '{$attr}' access denied.");
+
+            return $this;
+        } else if (property_exists($this, $name)) {
+            // 重载元素时存在同名已声明私有属性名无映射不允许重载赋值
+            throw new \InvalidArgumentException('access non public property on __get():' . get_class($this) . '::' . $name);
         } else {
             $this->attrs[$name] = $value;
         }
@@ -317,7 +397,8 @@ class Model extends Business {
      * @throws \wf\model\Exception
      * @return \wf\model\Model
      */
-    public function setPkv($pkv) {
+    public function setPkv($pkv)
+    {
         if (is_scalar($pkv)) {
             $this->setAttrVal($this->getPk(), $pkv);
         } elseif (is_array($pkv)) {
@@ -325,7 +406,7 @@ class Model extends Business {
                 $this->setAttrVal($pkItem, $pkv[$pkItem]);
             }
         } else {
-            throw new Exception('object or resource is not allow for param $pkv of '.get_called_class().'::->setPkv($pkv)');
+            throw new \InvalidArgumentException('object or resource is not allow for param $pkv of '.get_called_class().'::->setPkv($pkv)');
         }
 
         return $this;
@@ -336,7 +417,8 @@ class Model extends Business {
      * @throws \wf\model\Exception
      * @return bool
      */
-    public function load() {
+    public function load()
+    {
         return $this->loadBy($this->pkvAsWhere());
     }
 
@@ -347,7 +429,10 @@ class Model extends Business {
      * @throws \wf\model\Exception
      * @return boolean
      */
-    public function loadBy(array $whereArr = [], $order = '') {
+    public function loadBy(array $whereArr = [], $order = '')
+    {
+        $this->mustBeDataModel();
+
         if (empty($whereArr)) {
             throw new Exception('The $whereArr param format error in '.get_called_class().'::loadBy($whereArr)!');
         }
@@ -367,7 +452,8 @@ class Model extends Business {
      * 模型加载数据后，必须设置当前实例加载的实例的主键值才被视为已加载
      * @return \wf\model\Model
      */
-    protected function setLoaded() {
+    protected function setLoaded()
+    {
         $this->loadedPkv = $this->getPkv();
         if($this->loadedPkv === null) {
             throw new \UnexpectedValueException('The data is not loaded.');
@@ -381,7 +467,8 @@ class Model extends Business {
      * @param bool $setLoaded = false 是否设置实例为已加载
      * @return \wf\model\Model
      */
-    public function fromArray($array, $setLoaded = false) {
+    public function fromArray($array, $setLoaded = false)
+    {
         foreach ($array as $field => $value) {
             $this->setAttrVal($field, $value);
         }
@@ -399,7 +486,10 @@ class Model extends Business {
      * @throws \wf\model\Exception
      * @return bool
      */
-    public function isExist() {
+    public function isExist()
+    {
+        $this->mustBeDataModel();
+
         if ($this->isLoaded()) {
             return  true;
         }
@@ -413,7 +503,8 @@ class Model extends Business {
      * 获取对象实例的主键值
      * @return mixed 如果是多个字段构成的主键，将返回数组结构的值，如: $pkv = ['pk1' => 123, 'pk2' => 'y', ...]
      */
-    public function getPkv() {
+    public function getPkv()
+    {
         $pk = $this->getPk();
 
         try {
@@ -426,7 +517,7 @@ class Model extends Business {
             } else {
                 $pkv = $this->getAttrVal($pk);
             }
-        } catch (\InvalidArgumentException $e) {
+        } catch (\Exception $e) {
             return null;
         }
 
@@ -437,7 +528,8 @@ class Model extends Business {
      * 获取主键名
      * @return string|array
      */
-    public function getPk() {
+    public function getPk()
+    {
         return $this->tableSchema['pk'];
     }
 
@@ -446,7 +538,8 @@ class Model extends Business {
      * 建议直接用对象访问数据，尽可能少用转换成数组的方式获取数据。
      * @return array
      */
-    public function toArray() {
+    public function toArray()
+    {
         $arr = [];
         // 从保存未定义属性的变量中读取字段kv
         foreach ($this->attrs as $field => $value) {
@@ -454,8 +547,8 @@ class Model extends Business {
         }
 
         // 从指定的属性中读取字段kv
-        foreach ($this->fieldMap as $field => $attr) {
-            if (isset($this->$attr)) {
+        foreach ($this->columnMap as $field => $attr) {
+            if (property_exists($this, $attr)) {
                 $arr[$field] = $this->$attr;
             } else {
                 unset($arr[$field]);
@@ -470,17 +563,21 @@ class Model extends Business {
      *
      * @return bool|int
      */
-    public function delete() {
+    public function delete()
+    {
         return $this->deleteBy($this->pkvAsWhere());
     }
 
     /**
      * 根据条件删除实例
      * @param array $whArr
-     * @throws Exception
+     * @throws \wf\model\Exception
      * @return boolean
      */
-    public function deleteBy($whArr = []) {
+    public function deleteBy($whArr = [])
+    {
+        $this->mustBeDataModel();
+
         $where = \wf\db\QueryBuilder::whereArr($whArr ? $whArr : $this->pkvAsWhere());
         if(!trim($where)) {
             throw new \InvalidArgumentException('请传入删除记录的条件');
@@ -489,7 +586,7 @@ class Model extends Business {
         $exe = $this->getDb()->exec("DELETE FROM %t WHERE %x", [$this->table, $where]);
 
         if (false === $exe) {
-            throw new \wf\model\Exception($this->getDb()->getLastErr());
+            throw new Exception($this->getDb()->getLastErr());
         }
 
         return $exe;
@@ -498,7 +595,10 @@ class Model extends Business {
     /**
      * @throws \wf\db\Exception
      */
-    public function create() {
+    public function create()
+    {
+        $this->mustBeDataModel();
+
         $data = $this->toArray();
 
         $arg = [$this->table, $this->fieldSet($data)];
@@ -506,7 +606,7 @@ class Model extends Business {
         $exe = $this->getDb()->exec($sql, $arg);
 
         if (false === $exe) {
-            throw new \wf\model\Exception($this->getDb()->getLastErr());
+            throw new Exception($this->getDb()->getLastErr());
         }
 
         // 插入数据库成功后设置主键值
@@ -538,7 +638,10 @@ class Model extends Business {
      * @throws \wf\db\Exception
      * @return mixed
      */
-    public function replace() {
+    public function replace()
+    {
+        $this->mustBeDataModel();
+
         $data = $this->toArray();
 
         $arg = [$this->table, $this->fieldSet($data)];
@@ -572,7 +675,8 @@ class Model extends Business {
     /**
      * 更新记录
      */
-    public function update() {
+    public function update()
+    {
         return $this->updateBy($this->toArray(), $this->pkvAsWhere());
     }
 
@@ -581,7 +685,8 @@ class Model extends Business {
      * 数据是从持久层加载则更新，否则插入新记录
      * @return bool
      */
-    public function save() {
+    public function save()
+    {
         if($this->isLoaded()) {
             // 更新记录
             return (bool)$this->update();
@@ -592,12 +697,25 @@ class Model extends Business {
     }
 
     /**
+     * 检验必须是数据模型
+     * @throws Exception
+     */
+    public function mustBeDataModel()
+    {
+        if (!$this->isDataModel) {
+            throw new Exception('请设置模型类"' . get_class($this) . '"对应的数据表');
+        }
+    }
+
+    /**
      * 根据主键作为条件/传递给数据访问层（进行删改读操作）的默认条件
      * @throws \wf\model\Exception
      * @return array
      */
-    protected function pkvAsWhere() {
+    protected function pkvAsWhere()
+    {
         $this->checkPkv();
+
         if (is_array($this->getPk())) {
             if (is_scalar($this->getPkv())) {
                 throw new Exception('Error type of '.get_called_class().'::$id, it mast be array');
@@ -620,7 +738,8 @@ class Model extends Business {
      * @see \wf\db\QueryBuilder::buildQueryOptions()
      * @return \wf\db\Finder
      */
-    public function find($opts = []) {
+    public function find($opts = [])
+    {
         empty($opts['table']) && $opts['table'] = $this->table;
 
         $obj = new \wf\db\Finder($opts);
@@ -636,7 +755,10 @@ class Model extends Business {
      * @return number
      * @throws \wf\model\Exception
      */
-    public function updateBy($data, $whArr) {
+    public function updateBy($data, $whArr)
+    {
+        $this->mustBeDataModel();
+
         $where = \wf\db\QueryBuilder::whereArr($whArr);
 
         if (empty($where)) {
@@ -664,7 +786,10 @@ class Model extends Business {
      * @return boolean
      * @throws \wf\model\Exception
      */
-    public function saveFields($fields) {
+    public function saveFields($fields)
+    {
+        $this->mustBeDataModel();
+
         $fieldArr = explode(',', str_replace(' ', '', $fields));
         $update = [];
 
@@ -690,7 +815,8 @@ class Model extends Business {
      * 检查主键及主键值是否已设置
      * @throws \wf\model\Exception
      */
-    protected function checkPkv() {
+    protected function checkPkv()
+    {
         if (!$this->getPk() || !$this->getPkv()) {
             throw new Exception('Please set the model\'s primary key and primary keys value');
         }
@@ -704,7 +830,8 @@ class Model extends Business {
      * @throws \wf\model\Exception
      * @return string 返回 "`f1` = 'xx', `f2` = 'xxx'"
      */
-    protected function fieldSet(array $data) {
+    protected function fieldSet(array $data)
+    {
         if (!$this->tableSchema['field']) {
             throw new Exception('请在' . get_class($this) . '构造函数中调用父类的构造函数');
         }
@@ -716,7 +843,8 @@ class Model extends Business {
      * @param string $fields 字段名，用半角逗号隔开
      * @return \wf\model\Model
      */
-    public function addLockFields($fields) {
+    public function addLockFields($fields)
+    {
         $fields = explode(',', str_replace(' ', '', $fields));
         $this->lockedFields = array_merge($this->lockedFields, $fields);
         return $this;
@@ -727,7 +855,8 @@ class Model extends Business {
      * @param string $fields
      * @return \wf\model\Model
      */
-    public function removeLockFields($fields) {
+    public function removeLockFields($fields)
+    {
         $fields = explode(',', str_replace(' ', '', $fields));
         foreach ($fields as $field) {
             if (false !== ($fieldIndex = array_search($field, $this->lockedFields))) {
@@ -742,21 +871,24 @@ class Model extends Business {
      * 是否已加载实例
      * @return bool
      */
-    public function isLoaded() {
+    public function isLoaded()
+    {
         return $this->loadedPkv && $this->loadedPkv == $this->getPkv();
     }
 
     /**
      * 当前模型数据表
      */
-    public function getTable() {
+    public function getTable()
+    {
         return $this->table;
     }
 
     /**
      * 获取数据库访问对象实例
      */
-    public function getDb() {
+    public function getDb()
+    {
         if (!$this->db) {
             $this->db = \wfDb();
         }
@@ -769,7 +901,8 @@ class Model extends Business {
      * @param \wf\db\DBInterface $db
      * @return \wf\model\Model
      */
-    public function setDb(\wf\db\DBInterface $db) {
+    public function setDb(\wf\db\DBInterface $db)
+    {
         $this->db = $db;
 
         return $this;
@@ -779,7 +912,8 @@ class Model extends Business {
      * 添加/修改时验证数据规则
      * @see \wf\util\Validator::validate()
      */
-    public function validRules() {
+    public function validRules()
+    {
         return [];
     }
 
@@ -789,7 +923,7 @@ class Model extends Business {
      */
     public function runValidRules()
     {
-        return parent::validate($this->toArray(), $this->validRules());
+        return $this->validate($this->toArray(), $this->validRules());
     }
 
     /**
@@ -797,9 +931,11 @@ class Model extends Business {
      * （数据加载后不允许修改主键值），从而避免主键值可随意修改导致加载的记录和更新的记录
      * 不是同一条记录
      * @param bool $isInstanceApart
+     * @return \wf\model\Model
      */
     public function setInstanceApart($isInstanceApart)
     {
         $this->isInstanceApart = $isInstanceApart;
+        return $this;
     }
 }

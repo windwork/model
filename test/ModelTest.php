@@ -10,7 +10,6 @@ require_once __DIR__ . '/../../db/lib/QueryBuilder.php';
 require_once __DIR__ . '/../../db/lib/Finder.php';
 require_once __DIR__ . '/../../db/lib/adapter/PDOMySQL.php';
 require_once __DIR__ . '/../../util/lib/Validator.php';
-require_once __DIR__ . '/../lib/Business.php';
 require_once __DIR__ . '/../lib/Model.php';
 require_once __DIR__ . '/../lib/Error.php';
 require_once __DIR__ . '/../lib/Exception.php';
@@ -122,7 +121,7 @@ class ModelTestModel2 extends ModelTestModel
         return $this;
     }
 
-    protected $fieldMap = [
+    protected $columnMap = [
         'uname' => 'userName',
         'pw'    => 'password',
     ];
@@ -373,35 +372,41 @@ class ModelTest extends PHPUnit_Framework_TestCase
 
         // 属性映射到字段后，可用字段名读取到属性值
         $this->assertEquals('cm', $obj2->uname);
-        // 动态属性名不区分大小写
-        $this->assertEquals('cm', $obj2->uName);
+        // 动态属性名区分大小写
+        $uName = null;
+        try {
+            $uName = $obj2->uName;
+        } catch (\Exception $e) {
+
+        }
+        $this->assertEquals(null, $uName);
+
         $this->assertEquals('123456', $obj2->pw);
 
         // 属性映射到字段后，修改字段值，属性值也跟着变
         $obj2->pw = '654321'; // pw字段映射到 private $password; 通过 public setPassword($password) 访问
         $this->assertEquals('654321', $obj2->pw);
         $this->assertEquals('654321', $obj2->getPassword());
-        $this->assertEquals('654321', $obj2->password);
 
 
-        // 私有属性定义有对应的setter/getter方法，可以自动通过setter/getter访问
-        $obj2->password = '456123'; // private $password; 通过 public setPassword($password) 访问
-        $this->assertEquals('456123', $obj2->pw);
-        $this->assertEquals('456123', $obj2->getPassword());
-        $this->assertEquals('456123', $obj2->password);
+        $password = null;
+        try {
+            $obj2->password = '456123';
+            $password = 1;
+        } catch (\Exception $e) {
+
+        }
+        $this->assertNull($password);
 
         // isset
         $this->assertFalse(isset($obj2->qqqq)); // 不存在并且未动态赋值的属性
         $this->assertFalse(isset($obj2->noSeterGetter)); // private $noSeterGetter属性没有getter方法不能访问
         $this->assertTrue(isset($obj2->pw)); // $obj2->password
-        $this->assertTrue(isset($obj2->password)); // private $password属性有getter方法可访问
 
         // unset
         unset($obj2->uname);//unset动态属性，映射属性受影响
-        $this->assertEquals(null, $obj2->userName);
+        $this->assertEquals(null, $obj2->uname);
 
-        unset($obj2->password);//unset映射属性，动态属性受影响
-        $this->assertEquals(null, $obj2->pw);
     }
 
     /**
@@ -673,8 +678,16 @@ class ModelTest extends PHPUnit_Framework_TestCase
 
         // 3、Model::fromArray()强制为loaded
         $m3 = new ModelTestModel();
-        $m3->fromArray([1, 2, 3], 1);
-        $this->assertFalse($m3->isLoaded()); // 没设置主键值，强制设置loaded无效
+
+        // 没设置主键值，强制设置loaded无效
+        try {
+            $m3->fromArray([1, 2, 3], 1);
+            $ax = true;
+        } catch (\Exception $e) {
+            $ax = false;
+        }
+
+        $this->assertFalse($ax);
 
         $m3->fromArray(['id' => 12580], 1);
         $this->assertTrue($m3->isLoaded()); // 设置了主键值，强制设置loaded才有效
@@ -723,7 +736,15 @@ class ModelTest extends PHPUnit_Framework_TestCase
 
         // 设置、读取
         $name = uniqid();
-        $this->assertNull($m->$name);
+        try {
+            // 未定义
+            $m->$name;
+            $undef =  222;
+        } catch (\Exception $e) {
+            $undef = null;
+        }
+
+        $this->assertNull($undef);
 
         // 数字
         $val = 111;
@@ -765,6 +786,7 @@ class ModelTest extends PHPUnit_Framework_TestCase
         $this->assertTrue($hi === $ret);
 
         // 属性未定义，当已定义数组访问子元素
+        $m->emptyArr = [];
         $m->emptyArr['hi'] = $hi; // !!!!
         $ret = $m->emptyArr['hi'];
         $this->assertTrue($hi === $ret);
